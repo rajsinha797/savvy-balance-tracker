@@ -2,7 +2,8 @@
 import express from 'express';
 import cors from 'cors';
 import mysql from 'mysql2/promise';
-import { Request, Response } from 'express-serve-static-core';
+import { Request, Response } from 'express';
+import { ParamsDictionary } from 'express-serve-static-core';
 import { ParsedQs } from 'qs';
 
 const app = express();
@@ -62,7 +63,7 @@ app.get('/api/income', async (req: Request, res: Response) => {
 });
 
 // Get income by ID
-app.get<{ id: string }>('/api/income/:id', async (req: Request<{ id: string }>, res: Response) => {
+app.get('/api/income/:id', async (req: Request<{id: string}>, res: Response) => {
   try {
     const { id } = req.params;
     const query = `
@@ -122,7 +123,7 @@ app.post('/api/income', async (req: Request, res: Response) => {
 });
 
 // Update income
-app.put<{ id: string }>('/api/income/:id', async (req: Request<{ id: string }>, res: Response) => {
+app.put('/api/income/:id', async (req: Request<{id: string}>, res: Response) => {
   try {
     const { id } = req.params;
     const { amount, category_id, date, description } = req.body;
@@ -154,7 +155,7 @@ app.put<{ id: string }>('/api/income/:id', async (req: Request<{ id: string }>, 
 });
 
 // Delete income
-app.delete<{ id: string }>('/api/income/:id', async (req: Request<{ id: string }>, res: Response) => {
+app.delete('/api/income/:id', async (req: Request<{id: string}>, res: Response) => {
   try {
     const { id } = req.params;
     
