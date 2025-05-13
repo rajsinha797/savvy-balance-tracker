@@ -167,6 +167,36 @@ const IncomePage = () => {
         </Dialog>
       </div>
       
+      {/* Income Summary - Moved to the top */}
+      <Card className="card-gradient border-none">
+        <CardHeader>
+          <CardTitle className="text-xl font-semibold">Income Summary</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="bg-fintrack-bg-dark p-4 rounded-xl">
+              <div className="text-sm text-fintrack-text-secondary mb-1">Total Income</div>
+              <div className="text-xl font-bold text-green-500">
+                ₹{incomes.reduce((sum, item) => sum + item.amount, 0).toFixed(2)}
+              </div>
+            </div>
+            <div className="bg-fintrack-bg-dark p-4 rounded-xl">
+              <div className="text-sm text-fintrack-text-secondary mb-1">Average Income</div>
+              <div className="text-xl font-bold text-fintrack-purple">
+                ₹{incomes.length > 0 
+                  ? (incomes.reduce((sum, item) => sum + item.amount, 0) / incomes.length).toFixed(2) 
+                  : '0.00'}
+              </div>
+            </div>
+            <div className="bg-fintrack-bg-dark p-4 rounded-xl">
+              <div className="text-sm text-fintrack-text-secondary mb-1">Number of Entries</div>
+              <div className="text-xl font-bold">{incomes.length}</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      
+      {/* Income Entries - Moved below the summary */}
       <Card className="card-gradient border-none">
         <CardHeader>
           <CardTitle className="text-xl font-semibold">Income Entries</CardTitle>
@@ -194,7 +224,7 @@ const IncomePage = () => {
                     </td>
                     <td className="px-4 py-3 text-sm">{income.description}</td>
                     <td className="px-4 py-3 text-sm font-medium text-green-500 text-right">
-                      ${income.amount.toFixed(2)}
+                      ₹{income.amount.toFixed(2)}
                     </td>
                     <td className="px-4 py-3 text-right whitespace-nowrap">
                       <Button
@@ -228,34 +258,6 @@ const IncomePage = () => {
                 )}
               </tbody>
             </table>
-          </div>
-        </CardContent>
-      </Card>
-      
-      <Card className="card-gradient border-none">
-        <CardHeader>
-          <CardTitle className="text-xl font-semibold">Income Summary</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            <div className="bg-fintrack-bg-dark p-4 rounded-xl">
-              <div className="text-sm text-fintrack-text-secondary mb-1">Total Income</div>
-              <div className="text-xl font-bold text-green-500">
-                ${incomes.reduce((sum, item) => sum + item.amount, 0).toFixed(2)}
-              </div>
-            </div>
-            <div className="bg-fintrack-bg-dark p-4 rounded-xl">
-              <div className="text-sm text-fintrack-text-secondary mb-1">Average Income</div>
-              <div className="text-xl font-bold text-fintrack-purple">
-                ${incomes.length > 0 
-                  ? (incomes.reduce((sum, item) => sum + item.amount, 0) / incomes.length).toFixed(2) 
-                  : '0.00'}
-              </div>
-            </div>
-            <div className="bg-fintrack-bg-dark p-4 rounded-xl">
-              <div className="text-sm text-fintrack-text-secondary mb-1">Number of Entries</div>
-              <div className="text-xl font-bold">{incomes.length}</div>
-            </div>
           </div>
         </CardContent>
       </Card>

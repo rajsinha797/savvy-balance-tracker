@@ -171,6 +171,36 @@ const ExpensesPage = () => {
         </Dialog>
       </div>
       
+      {/* Expense Summary - Moved to the top */}
+      <Card className="card-gradient border-none">
+        <CardHeader>
+          <CardTitle className="text-xl font-semibold">Expense Summary</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="bg-fintrack-bg-dark p-4 rounded-xl">
+              <div className="text-sm text-fintrack-text-secondary mb-1">Total Expenses</div>
+              <div className="text-xl font-bold text-red-500">
+                ₹{expenses.reduce((sum, item) => sum + item.amount, 0).toFixed(2)}
+              </div>
+            </div>
+            <div className="bg-fintrack-bg-dark p-4 rounded-xl">
+              <div className="text-sm text-fintrack-text-secondary mb-1">Average Expense</div>
+              <div className="text-xl font-bold text-fintrack-purple">
+                ₹{expenses.length > 0 
+                  ? (expenses.reduce((sum, item) => sum + item.amount, 0) / expenses.length).toFixed(2) 
+                  : '0.00'}
+              </div>
+            </div>
+            <div className="bg-fintrack-bg-dark p-4 rounded-xl">
+              <div className="text-sm text-fintrack-text-secondary mb-1">Number of Entries</div>
+              <div className="text-xl font-bold">{expenses.length}</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      
+      {/* Expense Entries - Moved below the summary */}
       <Card className="card-gradient border-none">
         <CardHeader>
           <CardTitle className="text-xl font-semibold">Expense Entries</CardTitle>
@@ -198,7 +228,7 @@ const ExpensesPage = () => {
                     </td>
                     <td className="px-4 py-3 text-sm">{expense.description}</td>
                     <td className="px-4 py-3 text-sm font-medium text-red-500 text-right">
-                      ${expense.amount.toFixed(2)}
+                      ₹{expense.amount.toFixed(2)}
                     </td>
                     <td className="px-4 py-3 text-right whitespace-nowrap">
                       <Button
@@ -232,34 +262,6 @@ const ExpensesPage = () => {
                 )}
               </tbody>
             </table>
-          </div>
-        </CardContent>
-      </Card>
-      
-      <Card className="card-gradient border-none">
-        <CardHeader>
-          <CardTitle className="text-xl font-semibold">Expense Summary</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            <div className="bg-fintrack-bg-dark p-4 rounded-xl">
-              <div className="text-sm text-fintrack-text-secondary mb-1">Total Expenses</div>
-              <div className="text-xl font-bold text-red-500">
-                ${expenses.reduce((sum, item) => sum + item.amount, 0).toFixed(2)}
-              </div>
-            </div>
-            <div className="bg-fintrack-bg-dark p-4 rounded-xl">
-              <div className="text-sm text-fintrack-text-secondary mb-1">Average Expense</div>
-              <div className="text-xl font-bold text-fintrack-purple">
-                ${expenses.length > 0 
-                  ? (expenses.reduce((sum, item) => sum + item.amount, 0) / expenses.length).toFixed(2) 
-                  : '0.00'}
-              </div>
-            </div>
-            <div className="bg-fintrack-bg-dark p-4 rounded-xl">
-              <div className="text-sm text-fintrack-text-secondary mb-1">Number of Entries</div>
-              <div className="text-xl font-bold">{expenses.length}</div>
-            </div>
           </div>
         </CardContent>
       </Card>

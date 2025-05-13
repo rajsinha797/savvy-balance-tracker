@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { BarChart, PieChart, DollarSign, Wallet } from 'lucide-react';
+import { BarChart, PieChart, DollarSign, Wallet, IndianRupee } from 'lucide-react';
 import OverviewCard from '@/components/dashboard/OverviewCard';
 import TransactionList, { Transaction } from '@/components/dashboard/TransactionList';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,6 +24,15 @@ const recentTransactions: Transaction[] = [
   { id: '5', type: 'expense', amount: 25, category: 'Subscription', description: 'Netflix', date: '2025-05-07' },
 ];
 
+// Mock budget data
+const budgetData = [
+  { category: 'Housing', allocated: 1500, spent: 1200 },
+  { category: 'Food', allocated: 800, spent: 650 },
+  { category: 'Transportation', allocated: 400, spent: 380 },
+  { category: 'Entertainment', allocated: 300, spent: 200 },
+  { category: 'Utilities', allocated: 500, spent: 480 },
+];
+
 const Dashboard = () => {
   return (
     <div className="space-y-6 animate-fade-in">
@@ -33,25 +42,25 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <OverviewCard 
             title="Total Balance"
-            value="$8,250.00"
+            value="₹8,250.00"
             trend="up"
             trendValue="12%"
             description="vs last month"
-            icon={<DollarSign className="h-5 w-5 text-fintrack-purple" />}
+            icon={<IndianRupee className="h-5 w-5 text-fintrack-purple" />}
           />
           
           <OverviewCard 
             title="Total Income"
-            value="$12,450.00"
+            value="₹12,450.00"
             trend="up"
             trendValue="8%"
             description="vs last month"
-            icon={<DollarSign className="h-5 w-5 text-green-500" />}
+            icon={<IndianRupee className="h-5 w-5 text-green-500" />}
           />
           
           <OverviewCard 
             title="Total Expenses"
-            value="$4,200.00"
+            value="₹4,200.00"
             trend="down"
             trendValue="5%"
             description="vs last month"
@@ -119,15 +128,15 @@ const Dashboard = () => {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="bg-fintrack-bg-dark p-4 rounded-xl">
                   <div className="text-sm text-fintrack-text-secondary mb-1">Income</div>
-                  <div className="text-xl font-bold text-green-500">$12,450.00</div>
+                  <div className="text-xl font-bold text-green-500">₹12,450.00</div>
                 </div>
                 <div className="bg-fintrack-bg-dark p-4 rounded-xl">
                   <div className="text-sm text-fintrack-text-secondary mb-1">Expenses</div>
-                  <div className="text-xl font-bold text-red-500">$4,200.00</div>
+                  <div className="text-xl font-bold text-red-500">₹4,200.00</div>
                 </div>
                 <div className="bg-fintrack-bg-dark p-4 rounded-xl">
                   <div className="text-sm text-fintrack-text-secondary mb-1">Savings</div>
-                  <div className="text-xl font-bold text-fintrack-purple">$8,250.00</div>
+                  <div className="text-xl font-bold text-fintrack-purple">₹8,250.00</div>
                 </div>
               </div>
               
@@ -138,7 +147,7 @@ const Dashboard = () => {
                 </div>
                 <div className="flex justify-between mt-1 text-xs">
                   <span className="text-fintrack-text-secondary">67% of Goal</span>
-                  <span className="text-fintrack-text-secondary">Target: $12,500.00</span>
+                  <span className="text-fintrack-text-secondary">Target: ₹12,500.00</span>
                 </div>
               </div>
             </CardContent>
@@ -155,27 +164,63 @@ const Dashboard = () => {
                     <div className="font-medium">Rent</div>
                     <div className="text-xs text-fintrack-text-secondary">Due in 5 days</div>
                   </div>
-                  <div className="text-red-500 font-medium">$1,200.00</div>
+                  <div className="text-red-500 font-medium">₹1,200.00</div>
                 </div>
                 <div className="flex justify-between items-center">
                   <div>
                     <div className="font-medium">Internet</div>
                     <div className="text-xs text-fintrack-text-secondary">Due in 12 days</div>
                   </div>
-                  <div className="text-red-500 font-medium">$89.99</div>
+                  <div className="text-red-500 font-medium">₹89.99</div>
                 </div>
                 <div className="flex justify-between items-center">
                   <div>
                     <div className="font-medium">Phone</div>
                     <div className="text-xs text-fintrack-text-secondary">Due in 15 days</div>
                   </div>
-                  <div className="text-red-500 font-medium">$45.00</div>
+                  <div className="text-red-500 font-medium">₹45.00</div>
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
       </div>
+      
+      {/* Budget section */}
+      <Card className="card-gradient border-none">
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold">Monthly Budget</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {budgetData.map((item, index) => {
+              const percentage = Math.round((item.spent / item.allocated) * 100);
+              const barColor = percentage > 90 ? 'bg-red-500' : percentage > 70 ? 'bg-yellow-500' : 'bg-green-500';
+              
+              return (
+                <div key={index} className="space-y-1">
+                  <div className="flex justify-between items-center">
+                    <div className="font-medium">{item.category}</div>
+                    <div className="text-fintrack-text-secondary text-sm">
+                      ₹{item.spent.toLocaleString()} / ₹{item.allocated.toLocaleString()}
+                    </div>
+                  </div>
+                  <div className="w-full h-2 bg-fintrack-bg-dark rounded-full overflow-hidden">
+                    <div 
+                      className={`h-full ${barColor}`} 
+                      style={{ width: `${percentage}%` }}
+                    ></div>
+                  </div>
+                  <div className="flex justify-between mt-1 text-xs">
+                    <span className="text-fintrack-text-secondary">{percentage}%</span>
+                    <span className="text-fintrack-text-secondary">{item.allocated - item.spent > 0 ? `₹${(item.allocated - item.spent).toLocaleString()} remaining` : 'Over budget'}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
       
       <TransactionList transactions={recentTransactions} />
     </div>

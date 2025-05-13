@@ -56,7 +56,7 @@ const TransactionList: React.FC<TransactionListProps> = ({
                   <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium text-right ${
                     transaction.type === 'income' ? 'text-green-500' : 'text-red-500'
                   }`}>
-                    {transaction.type === 'income' ? '+' : '-'}${transaction.amount.toFixed(2)}
+                    {transaction.type === 'income' ? '+' : '-'}₹{transaction.amount.toFixed(2)}
                   </td>
                 </tr>
               ))}
