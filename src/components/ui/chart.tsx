@@ -1,6 +1,6 @@
 
 import * as React from "react"
-import { BarChart as RechartsBarChart, Bar, XAxis, Tooltip, ResponsiveContainer, ReferenceLine, Cell } from "recharts"
+import { BarChart as RechartsBarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, Cell } from "recharts"
 
 interface BarChartProps {
   data: any[]
@@ -14,6 +14,12 @@ export function BarChart({ data, children }: BarChartProps) {
         <XAxis
           dataKey="name"
           stroke="#8c9aae"
+          fontSize={12}
+          tickLine={false}
+          axisLine={false}
+        />
+        <YAxis 
+          stroke="#8c9aae" 
           fontSize={12}
           tickLine={false}
           axisLine={false}
