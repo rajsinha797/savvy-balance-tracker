@@ -1,73 +1,118 @@
-# Welcome to your Lovable project
 
-## Project info
+# FinTrack - Finance Tracking App
 
-**URL**: https://lovable.dev/projects/d4ab64f0-b168-47c0-b783-cffc579c805e
+## Features
+- Track income and expenses
+- Budget planning and monitoring
+- Comprehensive financial reports
+- Financial goals tracking
 
-## How can I edit this code?
+## API Server Setup
 
-There are several ways of editing your application.
+The app can work in two modes:
+1. **Standalone Mode:** Uses dummy data without a backend connection
+2. **Connected Mode:** Connects to a MySQL database for full functionality
 
-**Use Lovable**
+### Prerequisites for Connected Mode
+- MySQL server running locally
+- Database named `fintrack` created with the provided schema
+- Node.js installed to run the API server
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/d4ab64f0-b168-47c0-b783-cffc579c805e) and start prompting.
+### Starting the API Server
 
-Changes made via Lovable will be committed automatically to this repo.
+1. In a separate terminal, navigate to the project directory
+2. Run the API server with:
+```bash
+node src/api/start-server.js
+```
+3. The server will run on port 3001 by default
 
-**Use your preferred IDE**
+### Database Schema Setup
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+If you haven't set up the database yet, use this SQL to create the necessary tables:
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+```sql
+-- family: Central entity for grouping users
+CREATE TABLE family (
+    family_id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(100) NOT NULL
+);
 
-Follow these steps:
+-- user: Manages user details and authentication
+CREATE TABLE user (
+    user_id INT PRIMARY KEY AUTO_INCREMENT,
+    family_id INT NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    email VARCHAR(100)
+);
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+-- income_category: Categories for income
+CREATE TABLE income_category (
+    category_id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(50) NOT NULL
+);
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+-- expense_category: Categories for expenses
+CREATE TABLE expense_category (
+    category_id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(50) NOT NULL
+);
 
-# Step 3: Install the necessary dependencies.
-npm i
+-- income: Tracks income sources
+CREATE TABLE income (
+    income_id INT PRIMARY KEY AUTO_INCREMENT,
+    family_id INT NOT NULL,
+    user_id INT,
+    category_id INT NOT NULL,
+    amount DECIMAL(10,2) NOT NULL,
+    date DATE NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+-- expense: Tracks expenditures
+CREATE TABLE expense (
+    expense_id INT PRIMARY KEY AUTO_INCREMENT,
+    family_id INT NOT NULL,
+    user_id INT,
+    category_id INT NOT NULL,
+    amount DECIMAL(10,2) NOT NULL,
+    date DATE NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- Insert sample data for categories
+INSERT INTO income_category (name) VALUES 
+('Salary'), ('Freelance'), ('Interest'), ('Dividend'), ('Gift'), ('Other');
+
+INSERT INTO expense_category (name) VALUES 
+('Housing'), ('Food'), ('Transportation'), ('Entertainment'), ('Healthcare'), ('Education'), ('Utilities'), ('Other');
+
+-- Insert a sample family
+INSERT INTO family (name) VALUES ('Default Family');
+
+-- Insert a sample user (password is 'password' - implement proper hashing in production)
+INSERT INTO user (family_id, name, username, password_hash, email) 
+VALUES (1, 'Demo User', 'demo', 'password_hash_would_go_here', 'demo@example.com');
 ```
 
-**Edit a file directly in GitHub**
+### API Endpoints
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+The API server provides the following endpoints:
 
-**Use GitHub Codespaces**
+- **GET /api/test** - Test database connection
+- **GET /api/income/categories** - Get all income categories
+- **GET /api/income** - Get all incomes
+- **GET /api/income/:id** - Get income by ID
+- **POST /api/income** - Add new income
+- **PUT /api/income/:id** - Update income
+- **DELETE /api/income/:id** - Delete income
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Automatic Fallback
 
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/d4ab64f0-b168-47c0-b783-cffc579c805e) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+The app is designed to automatically detect if the API server is running. If the API is unavailable, the app will seamlessly fall back to using dummy data, allowing for UI development and testing without a database connection.

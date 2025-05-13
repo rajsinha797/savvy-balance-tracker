@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,64 +7,191 @@ import { Label } from '@/components/ui/label';
 import { Plus, Edit, Trash2, Check } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useToast } from "@/hooks/use-toast";
 
-interface Income {
-  id: string;
-  amount: number;
-  category: string;
-  description: string;
-  date: string;
-}
-
-const initialIncomes: Income[] = [
-  { id: '1', amount: 3500, category: 'Salary', description: 'Monthly salary', date: '2025-05-01' },
-  { id: '2', amount: 500, category: 'Freelance', description: 'Logo design project', date: '2025-05-03' },
-  { id: '3', amount: 200, category: 'Interest', description: 'Savings account interest', date: '2025-05-05' },
-];
+import { 
+  getAllIncomes, 
+  getIncomeCategories, 
+  addIncome, 
+  updateIncome, 
+  deleteIncome,
+  IncomeItem,
+  IncomeCategory 
+} from '@/services/incomeService';
 
 const IncomePage = () => {
-  const [incomes, setIncomes] = useState<Income[]>(initialIncomes);
-  const [newIncome, setNewIncome] = useState<Omit<Income, 'id'>>({ 
+  const { toast } = useToast();
+  const [incomes, setIncomes] = useState<IncomeItem[]>([]);
+  const [categories, setCategories] = useState<IncomeCategory[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  const [newIncome, setNewIncome] = useState<{ 
+    amount: number; 
+    category_id: number; 
+    description: string; 
+    date: string;
+  }>({ 
     amount: 0, 
-    category: '', 
+    category_id: 0, 
     description: '', 
     date: new Date().toISOString().split('T')[0] 
   });
-  const [editingIncome, setEditingIncome] = useState<Income | null>(null);
+  
+  const [editingIncome, setEditingIncome] = useState<(IncomeItem & { category_id: number }) | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  const handleAddIncome = () => {
-    if (newIncome.amount <= 0 || !newIncome.category) return;
-    
-    const income: Income = {
-      ...newIncome,
-      id: Date.now().toString(),
+  useEffect(() => {
+    const loadData = async () => {
+      setIsLoading(true);
+      try {
+        // Load income categories
+        const categoriesData = await getIncomeCategories();
+        setCategories(categoriesData);
+        
+        // Load income data
+        const incomesData = await getAllIncomes();
+        setIncomes(incomesData);
+      } catch (error) {
+        console.error('Error loading data:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load income data. Using demo data instead.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
     };
     
-    setIncomes([income, ...incomes]);
-    setNewIncome({ 
-      amount: 0, 
-      category: '', 
-      description: '', 
-      date: new Date().toISOString().split('T')[0] 
-    });
-    setIsDialogOpen(false);
+    loadData();
+  }, [toast]);
+
+  const handleAddIncome = async () => {
+    if (newIncome.amount <= 0 || !newIncome.category_id) {
+      toast({
+        title: "Validation Error",
+        description: "Please enter a valid amount and select a category.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      const result = await addIncome(newIncome);
+      
+      if (result.success) {
+        // Refresh the incomes list
+        const updatedIncomes = await getAllIncomes();
+        setIncomes(updatedIncomes);
+        
+        toast({
+          title: "Success",
+          description: result.message || "Income added successfully",
+        });
+        
+        // Reset form
+        setNewIncome({ 
+          amount: 0, 
+          category_id: 0, 
+          description: '', 
+          date: new Date().toISOString().split('T')[0] 
+        });
+        setIsDialogOpen(false);
+      } else {
+        toast({
+          title: "Error",
+          description: result.message || "Failed to add income",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error adding income:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred while adding income",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleEditIncome = () => {
-    if (!editingIncome || editingIncome.amount <= 0 || !editingIncome.category) return;
+  const handleEditIncome = async () => {
+    if (!editingIncome || editingIncome.amount <= 0 || !editingIncome.category_id) {
+      toast({
+        title: "Validation Error",
+        description: "Please enter a valid amount and select a category.",
+        variant: "destructive",
+      });
+      return;
+    }
     
-    setIncomes(incomes.map(income => 
-      income.id === editingIncome.id ? editingIncome : income
-    ));
-    
-    setEditingIncome(null);
-    setIsDialogOpen(false);
+    try {
+      const { id, amount, category_id, description, date } = editingIncome;
+      const result = await updateIncome(id, { amount, category_id, description, date });
+      
+      if (result.success) {
+        // Refresh the incomes list
+        const updatedIncomes = await getAllIncomes();
+        setIncomes(updatedIncomes);
+        
+        toast({
+          title: "Success",
+          description: result.message,
+        });
+        
+        setEditingIncome(null);
+        setIsDialogOpen(false);
+      } else {
+        toast({
+          title: "Error",
+          description: result.message,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error updating income:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred while updating income",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleDeleteIncome = (id: string) => {
-    setIncomes(incomes.filter(income => income.id !== id));
+  const handleDeleteIncome = async (id: string) => {
+    try {
+      const result = await deleteIncome(id);
+      
+      if (result.success) {
+        // Update the incomes list
+        const updatedIncomes = await getAllIncomes();
+        setIncomes(updatedIncomes);
+        
+        toast({
+          title: "Success",
+          description: result.message,
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: result.message,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error deleting income:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred while deleting income",
+        variant: "destructive",
+      });
+    }
   };
+
+  // Calculate total and average income
+  const totalIncome = incomes.reduce((sum, item) => sum + item.amount, 0);
+  const averageIncome = incomes.length > 0 
+    ? totalIncome / incomes.length
+    : 0;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -102,12 +229,13 @@ const IncomePage = () => {
               <div className="grid gap-2">
                 <Label htmlFor="category">Category</Label>
                 <Select
-                  value={editingIncome ? editingIncome.category : newIncome.category}
+                  value={String(editingIncome ? editingIncome.category_id : newIncome.category_id)}
                   onValueChange={(value) => {
+                    const categoryId = parseInt(value);
                     if (editingIncome) {
-                      setEditingIncome({ ...editingIncome, category: value });
+                      setEditingIncome({ ...editingIncome, category_id: categoryId });
                     } else {
-                      setNewIncome({ ...newIncome, category: value });
+                      setNewIncome({ ...newIncome, category_id: categoryId });
                     }
                   }}
                 >
@@ -115,12 +243,11 @@ const IncomePage = () => {
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent className="bg-fintrack-card-dark border-fintrack-bg-dark">
-                    <SelectItem value="Salary">Salary</SelectItem>
-                    <SelectItem value="Freelance">Freelance</SelectItem>
-                    <SelectItem value="Interest">Interest</SelectItem>
-                    <SelectItem value="Dividend">Dividend</SelectItem>
-                    <SelectItem value="Gift">Gift</SelectItem>
-                    <SelectItem value="Other">Other</SelectItem>
+                    {categories.map((category) => (
+                      <SelectItem key={category.category_id} value={String(category.category_id)}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -167,7 +294,7 @@ const IncomePage = () => {
         </Dialog>
       </div>
       
-      {/* Income Summary - Moved to the top */}
+      {/* Income Summary - Top section */}
       <Card className="card-gradient border-none">
         <CardHeader>
           <CardTitle className="text-xl font-semibold">Income Summary</CardTitle>
@@ -177,15 +304,13 @@ const IncomePage = () => {
             <div className="bg-fintrack-bg-dark p-4 rounded-xl">
               <div className="text-sm text-fintrack-text-secondary mb-1">Total Income</div>
               <div className="text-xl font-bold text-green-500">
-                ₹{incomes.reduce((sum, item) => sum + item.amount, 0).toFixed(2)}
+                ₹{totalIncome.toFixed(2)}
               </div>
             </div>
             <div className="bg-fintrack-bg-dark p-4 rounded-xl">
               <div className="text-sm text-fintrack-text-secondary mb-1">Average Income</div>
               <div className="text-xl font-bold text-fintrack-purple">
-                ₹{incomes.length > 0 
-                  ? (incomes.reduce((sum, item) => sum + item.amount, 0) / incomes.length).toFixed(2) 
-                  : '0.00'}
+                ₹{averageIncome.toFixed(2)}
               </div>
             </div>
             <div className="bg-fintrack-bg-dark p-4 rounded-xl">
@@ -196,69 +321,82 @@ const IncomePage = () => {
         </CardContent>
       </Card>
       
-      {/* Income Entries - Moved below the summary */}
+      {/* Income Entries - Bottom section */}
       <Card className="card-gradient border-none">
         <CardHeader>
           <CardTitle className="text-xl font-semibold">Income Entries</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="border-b border-fintrack-bg-dark">
-                  <th className="px-4 py-3 text-left text-xs font-medium text-fintrack-text-secondary">Date</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-fintrack-text-secondary">Category</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-fintrack-text-secondary">Description</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-fintrack-text-secondary">Amount</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-fintrack-text-secondary">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {incomes.map((income) => (
-                  <tr key={income.id} className="border-b border-fintrack-bg-dark">
-                    <td className="px-4 py-3 text-sm whitespace-nowrap">{income.date}</td>
-                    <td className="px-4 py-3 text-sm whitespace-nowrap">
-                      <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-green-500/10 text-green-500">
-                        {income.category}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-sm">{income.description}</td>
-                    <td className="px-4 py-3 text-sm font-medium text-green-500 text-right">
-                      ₹{income.amount.toFixed(2)}
-                    </td>
-                    <td className="px-4 py-3 text-right whitespace-nowrap">
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => {
-                          setEditingIncome(income);
-                          setIsDialogOpen(true);
-                        }}
-                        className="h-8 w-8 text-fintrack-text-secondary"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => handleDeleteIncome(income.id)}
-                        className="h-8 w-8 text-fintrack-text-secondary"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </td>
+          {isLoading ? (
+            <div className="flex justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-fintrack-purple"></div>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="border-b border-fintrack-bg-dark">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-fintrack-text-secondary">Date</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-fintrack-text-secondary">Category</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-fintrack-text-secondary">Description</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-fintrack-text-secondary">Amount</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-fintrack-text-secondary">Actions</th>
                   </tr>
-                ))}
-                {incomes.length === 0 && (
-                  <tr>
-                    <td colSpan={5} className="px-4 py-6 text-center text-fintrack-text-secondary">
-                      No income entries found. Add your first income entry.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {incomes.map((income) => (
+                    <tr key={income.id} className="border-b border-fintrack-bg-dark">
+                      <td className="px-4 py-3 text-sm whitespace-nowrap">{income.date}</td>
+                      <td className="px-4 py-3 text-sm whitespace-nowrap">
+                        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-green-500/10 text-green-500">
+                          {income.category}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm">{income.description}</td>
+                      <td className="px-4 py-3 text-sm font-medium text-green-500 text-right">
+                        ₹{income.amount.toFixed(2)}
+                      </td>
+                      <td className="px-4 py-3 text-right whitespace-nowrap">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => {
+                            // Find category_id based on category name
+                            const categoryObj = categories.find(c => c.name === income.category);
+                            const category_id = categoryObj ? categoryObj.category_id : 0;
+                            
+                            setEditingIncome({
+                              ...income,
+                              category_id
+                            });
+                            setIsDialogOpen(true);
+                          }}
+                          className="h-8 w-8 text-fintrack-text-secondary"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => handleDeleteIncome(income.id)}
+                          className="h-8 w-8 text-fintrack-text-secondary"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                  {incomes.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="px-4 py-6 text-center text-fintrack-text-secondary">
+                        No income entries found. Add your first income entry.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
