@@ -63,7 +63,7 @@ app.get('/api/income', async (req: Request, res: Response) => {
 });
 
 // Get income by ID
-app.get<ParamsDictionary>('/api/income/:id', async (req: Request<ParamsDictionary>, res: Response) => {
+app.get('/api/income/:id', async (req: Request<ParamsDictionary>, res: Response) => {
   try {
     const { id } = req.params;
     const query = `
@@ -75,7 +75,8 @@ app.get<ParamsDictionary>('/api/income/:id', async (req: Request<ParamsDictionar
     const [rows] = await pool.query(query, [id]);
     
     if (Array.isArray(rows) && rows.length === 0) {
-      return res.status(404).json({ status: 'error', message: 'Income not found' });
+      res.status(404).json({ status: 'error', message: 'Income not found' });
+      return;
     }
     
     res.json(rows[0]);
@@ -123,7 +124,7 @@ app.post('/api/income', async (req: Request, res: Response) => {
 });
 
 // Update income
-app.put<ParamsDictionary>('/api/income/:id', async (req: Request<ParamsDictionary>, res: Response) => {
+app.put('/api/income/:id', async (req: Request<ParamsDictionary>, res: Response) => {
   try {
     const { id } = req.params;
     const { amount, category_id, date, description } = req.body;
@@ -144,7 +145,8 @@ app.put<ParamsDictionary>('/api/income/:id', async (req: Request<ParamsDictionar
     
     const resultHeader = result as mysql.ResultSetHeader;
     if (resultHeader.affectedRows === 0) {
-      return res.status(404).json({ status: 'error', message: 'Income not found' });
+      res.status(404).json({ status: 'error', message: 'Income not found' });
+      return;
     }
     
     res.json({ status: 'success', message: 'Income updated successfully' });
@@ -155,7 +157,7 @@ app.put<ParamsDictionary>('/api/income/:id', async (req: Request<ParamsDictionar
 });
 
 // Delete income
-app.delete<ParamsDictionary>('/api/income/:id', async (req: Request<ParamsDictionary>, res: Response) => {
+app.delete('/api/income/:id', async (req: Request<ParamsDictionary>, res: Response) => {
   try {
     const { id } = req.params;
     
@@ -164,7 +166,8 @@ app.delete<ParamsDictionary>('/api/income/:id', async (req: Request<ParamsDictio
     
     const resultHeader = result as mysql.ResultSetHeader;
     if (resultHeader.affectedRows === 0) {
-      return res.status(404).json({ status: 'error', message: 'Income not found' });
+      res.status(404).json({ status: 'error', message: 'Income not found' });
+      return;
     }
     
     res.json({ status: 'success', message: 'Income deleted successfully' });
