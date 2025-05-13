@@ -2,7 +2,7 @@
 import React from 'react';
 import { BarChart, PieChart, DollarSign, Wallet } from 'lucide-react';
 import OverviewCard from '@/components/dashboard/OverviewCard';
-import TransactionList from '@/components/dashboard/TransactionList';
+import TransactionList, { Transaction } from '@/components/dashboard/TransactionList';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
@@ -16,7 +16,7 @@ const chartData = [
   { name: 'Jun', income: 4800, expenses: 3300 },
 ];
 
-const recentTransactions = [
+const recentTransactions: Transaction[] = [
   { id: '1', type: 'income', amount: 2500, category: 'Salary', description: 'Monthly salary', date: '2025-05-01' },
   { id: '2', type: 'expense', amount: 80, category: 'Groceries', description: 'Weekly groceries', date: '2025-05-02' },
   { id: '3', type: 'expense', amount: 120, category: 'Utilities', description: 'Electricity bill', date: '2025-05-04' },
