@@ -63,7 +63,7 @@ app.get('/api/income', async (req: Request, res: Response) => {
 });
 
 // Get income by ID
-app.get('/api/income/:id', async (req: Request<{id: string}>, res: Response) => {
+app.get('/api/income/:id', async (req: Request<ParamsDictionary, any, any, any, Record<string, any>>, res: Response) => {
   try {
     const { id } = req.params;
     const query = `
@@ -123,7 +123,7 @@ app.post('/api/income', async (req: Request, res: Response) => {
 });
 
 // Update income
-app.put('/api/income/:id', async (req: Request<{id: string}>, res: Response) => {
+app.put('/api/income/:id', async (req: Request<ParamsDictionary, any, any, any, Record<string, any>>, res: Response) => {
   try {
     const { id } = req.params;
     const { amount, category_id, date, description } = req.body;
@@ -155,7 +155,7 @@ app.put('/api/income/:id', async (req: Request<{id: string}>, res: Response) => 
 });
 
 // Delete income
-app.delete('/api/income/:id', async (req: Request<{id: string}>, res: Response) => {
+app.delete('/api/income/:id', async (req: Request<ParamsDictionary, any, any, any, Record<string, any>>, res: Response) => {
   try {
     const { id } = req.params;
     
