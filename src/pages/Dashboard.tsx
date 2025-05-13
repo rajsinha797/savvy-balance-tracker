@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { BarChart, PieChart, DollarSign, Wallet, IndianRupee, Filter } from 'lucide-react';
 import OverviewCard from '@/components/dashboard/OverviewCard';
@@ -234,7 +233,7 @@ const Dashboard = () => {
               <SelectValue placeholder="All Members" />
             </SelectTrigger>
             <SelectContent className="bg-fintrack-card-dark border-fintrack-bg-dark">
-              <SelectItem value="">All Members</SelectItem>
+              <SelectItem value="all-members">All Members</SelectItem>
               {familyMembers.map((member) => (
                 <SelectItem key={member.id} value={member.id}>
                   {member.name}

@@ -285,7 +285,7 @@ const Reports = () => {
             <SelectValue placeholder="All Members" />
           </SelectTrigger>
           <SelectContent className="bg-fintrack-card-dark border-fintrack-bg-dark">
-            <SelectItem value="">All Members</SelectItem>
+            <SelectItem value="all-members">All Members</SelectItem>
             {familyMembers.map((member) => (
               <SelectItem key={member.id} value={member.id}>
                 {member.name}
