@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Plus, Edit, Trash2, Check } from 'lucide-react';
+import { Plus, Edit, Trash2, Check, Filter } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from "@/hooks/use-toast";
@@ -19,10 +19,17 @@ import {
   IncomeCategory 
 } from '@/services/incomeService';
 
+import { 
+  getAllFamilyMembers,
+  FamilyMember 
+} from '@/services/familyService';
+
 const IncomePage = () => {
   const { toast } = useToast();
   const [incomes, setIncomes] = useState<IncomeItem[]>([]);
   const [categories, setCategories] = useState<IncomeCategory[]>([]);
+  const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
+  const [selectedFamilyMember, setSelectedFamilyMember] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
   
   const [newIncome, setNewIncome] = useState<{ 
@@ -30,14 +37,16 @@ const IncomePage = () => {
     category_id: number; 
     description: string; 
     date: string;
+    family_member_id: string;
   }>({ 
     amount: 0, 
     category_id: 0, 
     description: '', 
-    date: new Date().toISOString().split('T')[0] 
+    date: new Date().toISOString().split('T')[0],
+    family_member_id: '' 
   });
   
-  const [editingIncome, setEditingIncome] = useState<(IncomeItem & { category_id: number }) | null>(null);
+  const [editingIncome, setEditingIncome] = useState<(IncomeItem & { category_id: number, family_member_id?: string }) | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   useEffect(() => {
@@ -48,8 +57,18 @@ const IncomePage = () => {
         const categoriesData = await getIncomeCategories();
         setCategories(categoriesData);
         
+        // Load family members
+        const familyData = await getAllFamilyMembers();
+        setFamilyMembers(familyData);
+        
+        // Set default family member if available
+        const defaultMember = familyData.find(member => member.is_default);
+        if (defaultMember) {
+          setNewIncome(prev => ({ ...prev, family_member_id: defaultMember.id }));
+        }
+        
         // Load income data
-        const incomesData = await getAllIncomes();
+        const incomesData = await getAllIncomes(selectedFamilyMember);
         setIncomes(incomesData);
       } catch (error) {
         console.error('Error loading data:', error);
@@ -64,7 +83,7 @@ const IncomePage = () => {
     };
     
     loadData();
-  }, [toast]);
+  }, [toast, selectedFamilyMember]);
 
   const handleAddIncome = async () => {
     if (newIncome.amount <= 0 || !newIncome.category_id) {
@@ -81,7 +100,7 @@ const IncomePage = () => {
       
       if (result.success) {
         // Refresh the incomes list
-        const updatedIncomes = await getAllIncomes();
+        const updatedIncomes = await getAllIncomes(selectedFamilyMember);
         setIncomes(updatedIncomes);
         
         toast({
@@ -94,7 +113,8 @@ const IncomePage = () => {
           amount: 0, 
           category_id: 0, 
           description: '', 
-          date: new Date().toISOString().split('T')[0] 
+          date: new Date().toISOString().split('T')[0],
+          family_member_id: newIncome.family_member_id // Keep the currently selected family member
         });
         setIsDialogOpen(false);
       } else {
@@ -125,12 +145,12 @@ const IncomePage = () => {
     }
     
     try {
-      const { id, amount, category_id, description, date } = editingIncome;
-      const result = await updateIncome(id, { amount, category_id, description, date });
+      const { id, amount, category_id, description, date, family_member_id } = editingIncome;
+      const result = await updateIncome(id, { amount, category_id, description, date, family_member_id });
       
       if (result.success) {
         // Refresh the incomes list
-        const updatedIncomes = await getAllIncomes();
+        const updatedIncomes = await getAllIncomes(selectedFamilyMember);
         setIncomes(updatedIncomes);
         
         toast({
@@ -163,7 +183,7 @@ const IncomePage = () => {
       
       if (result.success) {
         // Update the incomes list
-        const updatedIncomes = await getAllIncomes();
+        const updatedIncomes = await getAllIncomes(selectedFamilyMember);
         setIncomes(updatedIncomes);
         
         toast({
@@ -193,111 +213,168 @@ const IncomePage = () => {
     ? totalIncome / incomes.length
     : 0;
 
+  const handleFamilyMemberChange = (value: string) => {
+    setSelectedFamilyMember(value);
+  };
+
+  // Find family member name by ID
+  const getFamilyMemberName = (id?: string) => {
+    if (!id) return "All Members";
+    const member = familyMembers.find(m => m.id === id);
+    return member ? member.name : "Unknown";
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Income Management</h2>
         
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-fintrack-purple hover:bg-fintrack-purple/90">
-              <Plus className="h-4 w-4 mr-2" /> Add Income
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="bg-fintrack-card-dark border border-fintrack-bg-dark">
-            <DialogHeader>
-              <DialogTitle>{editingIncome ? 'Edit Income' : 'Add New Income'}</DialogTitle>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="amount">Amount</Label>
-                <Input
-                  id="amount"
-                  type="number"
-                  value={editingIncome ? editingIncome.amount : newIncome.amount}
-                  onChange={(e) => {
-                    const value = parseFloat(e.target.value);
-                    if (editingIncome) {
-                      setEditingIncome({ ...editingIncome, amount: value || 0 });
-                    } else {
-                      setNewIncome({ ...newIncome, amount: value || 0 });
-                    }
-                  }}
-                  className="bg-fintrack-bg-dark border-fintrack-bg-dark"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="category">Category</Label>
-                <Select
-                  value={String(editingIncome ? editingIncome.category_id : newIncome.category_id)}
-                  onValueChange={(value) => {
-                    const categoryId = parseInt(value);
-                    if (editingIncome) {
-                      setEditingIncome({ ...editingIncome, category_id: categoryId });
-                    } else {
-                      setNewIncome({ ...newIncome, category_id: categoryId });
-                    }
-                  }}
-                >
-                  <SelectTrigger className="bg-fintrack-bg-dark border-fintrack-bg-dark">
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-fintrack-card-dark border-fintrack-bg-dark">
-                    {categories.map((category) => (
-                      <SelectItem key={category.category_id} value={String(category.category_id)}>
-                        {category.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="description">Description</Label>
-                <Input
-                  id="description"
-                  value={editingIncome ? editingIncome.description : newIncome.description}
-                  onChange={(e) => {
-                    if (editingIncome) {
-                      setEditingIncome({ ...editingIncome, description: e.target.value });
-                    } else {
-                      setNewIncome({ ...newIncome, description: e.target.value });
-                    }
-                  }}
-                  className="bg-fintrack-bg-dark border-fintrack-bg-dark"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="date">Date</Label>
-                <Input
-                  id="date"
-                  type="date"
-                  value={editingIncome ? editingIncome.date : newIncome.date}
-                  onChange={(e) => {
-                    if (editingIncome) {
-                      setEditingIncome({ ...editingIncome, date: e.target.value });
-                    } else {
-                      setNewIncome({ ...newIncome, date: e.target.value });
-                    }
-                  }}
-                  className="bg-fintrack-bg-dark border-fintrack-bg-dark"
-                />
-              </div>
-              <Button 
-                onClick={editingIncome ? handleEditIncome : handleAddIncome}
-                className="mt-2 bg-fintrack-purple hover:bg-fintrack-purple/90"
-              >
-                <Check className="h-4 w-4 mr-2" />
-                {editingIncome ? 'Update Income' : 'Add Income'}
+        <div className="flex gap-2">
+          <Select 
+            value={selectedFamilyMember} 
+            onValueChange={handleFamilyMemberChange}
+          >
+            <SelectTrigger className="w-[180px] bg-fintrack-bg-dark border-fintrack-bg-dark">
+              <Filter className="h-4 w-4 mr-2" />
+              <SelectValue placeholder="All Members" />
+            </SelectTrigger>
+            <SelectContent className="bg-fintrack-card-dark border-fintrack-bg-dark">
+              <SelectItem value="">All Members</SelectItem>
+              {familyMembers.map((member) => (
+                <SelectItem key={member.id} value={member.id}>
+                  {member.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-fintrack-purple hover:bg-fintrack-purple/90">
+                <Plus className="h-4 w-4 mr-2" /> Add Income
               </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent className="bg-fintrack-card-dark border border-fintrack-bg-dark">
+              <DialogHeader>
+                <DialogTitle>{editingIncome ? 'Edit Income' : 'Add New Income'}</DialogTitle>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="amount">Amount</Label>
+                  <Input
+                    id="amount"
+                    type="number"
+                    value={editingIncome ? editingIncome.amount : newIncome.amount}
+                    onChange={(e) => {
+                      const value = parseFloat(e.target.value);
+                      if (editingIncome) {
+                        setEditingIncome({ ...editingIncome, amount: value || 0 });
+                      } else {
+                        setNewIncome({ ...newIncome, amount: value || 0 });
+                      }
+                    }}
+                    className="bg-fintrack-bg-dark border-fintrack-bg-dark"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="category">Category</Label>
+                  <Select
+                    value={String(editingIncome ? editingIncome.category_id : newIncome.category_id)}
+                    onValueChange={(value) => {
+                      const categoryId = parseInt(value);
+                      if (editingIncome) {
+                        setEditingIncome({ ...editingIncome, category_id: categoryId });
+                      } else {
+                        setNewIncome({ ...newIncome, category_id: categoryId });
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="bg-fintrack-bg-dark border-fintrack-bg-dark">
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-fintrack-card-dark border-fintrack-bg-dark">
+                      {categories.map((category) => (
+                        <SelectItem key={category.category_id} value={String(category.category_id)}>
+                          {category.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="family_member">Family Member</Label>
+                  <Select
+                    value={String(editingIncome ? editingIncome.family_member_id : newIncome.family_member_id)}
+                    onValueChange={(value) => {
+                      if (editingIncome) {
+                        setEditingIncome({ ...editingIncome, family_member_id: value });
+                      } else {
+                        setNewIncome({ ...newIncome, family_member_id: value });
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="bg-fintrack-bg-dark border-fintrack-bg-dark">
+                      <SelectValue placeholder="Select family member" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-fintrack-card-dark border-fintrack-bg-dark">
+                      {familyMembers.map((member) => (
+                        <SelectItem key={member.id} value={String(member.id)}>
+                          {member.name} ({member.relationship})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="description">Description</Label>
+                  <Input
+                    id="description"
+                    value={editingIncome ? editingIncome.description : newIncome.description}
+                    onChange={(e) => {
+                      if (editingIncome) {
+                        setEditingIncome({ ...editingIncome, description: e.target.value });
+                      } else {
+                        setNewIncome({ ...newIncome, description: e.target.value });
+                      }
+                    }}
+                    className="bg-fintrack-bg-dark border-fintrack-bg-dark"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="date">Date</Label>
+                  <Input
+                    id="date"
+                    type="date"
+                    value={editingIncome ? editingIncome.date : newIncome.date}
+                    onChange={(e) => {
+                      if (editingIncome) {
+                        setEditingIncome({ ...editingIncome, date: e.target.value });
+                      } else {
+                        setNewIncome({ ...newIncome, date: e.target.value });
+                      }
+                    }}
+                    className="bg-fintrack-bg-dark border-fintrack-bg-dark"
+                  />
+                </div>
+                <Button 
+                  onClick={editingIncome ? handleEditIncome : handleAddIncome}
+                  className="mt-2 bg-fintrack-purple hover:bg-fintrack-purple/90"
+                >
+                  <Check className="h-4 w-4 mr-2" />
+                  {editingIncome ? 'Update Income' : 'Add Income'}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
       
       {/* Income Summary - Top section */}
       <Card className="card-gradient border-none">
         <CardHeader>
-          <CardTitle className="text-xl font-semibold">Income Summary</CardTitle>
+          <CardTitle className="text-xl font-semibold">
+            Income Summary {selectedFamilyMember && `- ${getFamilyMemberName(selectedFamilyMember)}`}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
@@ -338,6 +415,7 @@ const IncomePage = () => {
                   <tr className="border-b border-fintrack-bg-dark">
                     <th className="px-4 py-3 text-left text-xs font-medium text-fintrack-text-secondary">Date</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-fintrack-text-secondary">Category</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-fintrack-text-secondary">Family Member</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-fintrack-text-secondary">Description</th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-fintrack-text-secondary">Amount</th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-fintrack-text-secondary">Actions</th>
@@ -351,6 +429,9 @@ const IncomePage = () => {
                         <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-green-500/10 text-green-500">
                           {income.category}
                         </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm whitespace-nowrap">
+                        {income.family_member || "Not assigned"}
                       </td>
                       <td className="px-4 py-3 text-sm">{income.description}</td>
                       <td className="px-4 py-3 text-sm font-medium text-green-500 text-right">
@@ -367,7 +448,8 @@ const IncomePage = () => {
                             
                             setEditingIncome({
                               ...income,
-                              category_id
+                              category_id,
+                              family_member_id: income.family_member_id
                             });
                             setIsDialogOpen(true);
                           }}
@@ -388,7 +470,7 @@ const IncomePage = () => {
                   ))}
                   {incomes.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="px-4 py-6 text-center text-fintrack-text-secondary">
+                      <td colSpan={6} className="px-4 py-6 text-center text-fintrack-text-secondary">
                         No income entries found. Add your first income entry.
                       </td>
                     </tr>

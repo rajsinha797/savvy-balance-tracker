@@ -1,514 +1,504 @@
 
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { BarChart, BarStack } from '@/components/ui/chart';
-import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { ChartPie, BarChart3, CalendarRange, IndianRupee, ArrowUpDown } from 'lucide-react';
+import { Filter } from 'lucide-react';
+import { useToast } from "@/hooks/use-toast";
+import {
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+} from 'recharts';
+import { getAllFamilyMembers, FamilyMember } from '@/services/familyService';
+import axios from 'axios';
 
-// Mock data for expense by category
-const expenseByCategory = [
-  { name: 'Housing', value: 1500, color: '#9b87f5' },
-  { name: 'Food', value: 650, color: '#6E59A5' },
-  { name: 'Transportation', value: 380, color: '#1EAEDB' },
-  { name: 'Utilities', value: 480, color: '#33C3F0' },
-  { name: 'Entertainment', value: 320, color: '#7E69AB' },
-  { name: 'Health', value: 250, color: '#E5DEFF' },
-  { name: 'Other', value: 420, color: '#ea384c' },
-];
+const API_URL = 'http://localhost:3001';
 
-// Mock data for monthly comparison
-const monthlyComparisonData = [
-  {
-    name: 'Jan',
-    income: 5000,
-    expenses: 3400,
-    savings: 1600,
-  },
-  {
-    name: 'Feb',
-    income: 5200,
-    expenses: 3100,
-    savings: 2100,
-  },
-  {
-    name: 'Mar',
-    income: 6000,
-    expenses: 3800,
-    savings: 2200,
-  },
-  {
-    name: 'Apr',
-    income: 5500,
-    expenses: 3600,
-    savings: 1900,
-  },
-  {
-    name: 'May',
-    income: 5800,
-    expenses: 3400,
-    savings: 2400,
-  },
-  {
-    name: 'Jun',
-    income: 5900,
-    expenses: 3500,
-    savings: 2400,
-  },
-];
+const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
-// Mock data for income sources
-const incomeSourcesData = [
-  { name: 'Salary', value: 4800, color: '#10B981' },
-  { name: 'Freelance', value: 800, color: '#34D399' },
-  { name: 'Interest', value: 200, color: '#6EE7B7' },
-  { name: 'Investments', value: 100, color: '#A7F3D0' },
-];
-
-// Mock data for spending trends
-const spendingTrendsData = [
-  {
-    name: 'Week 1',
-    Housing: 350,
-    Food: 180,
-    Transport: 90,
-    Entertainment: 70,
-    Utilities: 120,
-    Other: 100,
-  },
-  {
-    name: 'Week 2',
-    Housing: 350,
-    Food: 165,
-    Transport: 85,
-    Entertainment: 90,
-    Utilities: 110,
-    Other: 90,
-  },
-  {
-    name: 'Week 3',
-    Housing: 350,
-    Food: 190,
-    Transport: 100,
-    Entertainment: 75,
-    Utilities: 130,
-    Other: 110,
-  },
-  {
-    name: 'Week 4',
-    Housing: 350,
-    Food: 170,
-    Transport: 95,
-    Entertainment: 85,
-    Utilities: 120,
-    Other: 120,
-  },
-];
-
-const spendingColors = {
-  Housing: '#9b87f5',
-  Food: '#6E59A5',
-  Transport: '#1EAEDB',
-  Entertainment: '#33C3F0',
-  Utilities: '#7E69AB',
-  Other: '#D6BCFA',
+// Convert day of week number to name (MySQL returns 1=Sunday, 2=Monday, etc.)
+const getDayName = (dayNumber: number) => {
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  return days[(dayNumber - 1) % 7];
 };
 
-const ReportsPage = () => {
-  const [timeRange, setTimeRange] = useState('month');
+const formatCurrency = (value: number) => {
+  return `₹${Number(value).toFixed(2)}`;
+};
+
+const formatMonth = (month: number, year: number) => {
+  const date = new Date(year, month - 1);
+  return date.toLocaleString('default', { month: 'short', year: 'numeric' });
+};
+
+const Reports = () => {
+  const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState<string>('overview');
+  const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
+  const [selectedFamilyMember, setSelectedFamilyMember] = useState<string>("");
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [monthlySummary, setMonthlySummary] = useState<any[]>([]);
+  const [weeklySpending, setWeeklySpending] = useState<any[]>([]);
+  const [categoryBreakdown, setCategoryBreakdown] = useState<any[]>([]);
+
+  useEffect(() => {
+    loadData();
+  }, [activeTab, selectedFamilyMember]);
+
+  const loadData = async () => {
+    setIsLoading(true);
+    try {
+      // Load family members
+      const familyData = await getAllFamilyMembers();
+      setFamilyMembers(familyData);
+
+      // If on overview tab, load monthly summary data
+      if (activeTab === 'overview') {
+        const url = selectedFamilyMember 
+          ? `${API_URL}/api/reports/monthly?family_member_id=${selectedFamilyMember}`
+          : `${API_URL}/api/reports/monthly`;
+        
+        const response = await axios.get(url);
+        const data = response.data;
+        
+        // Process the monthly summary data
+        const processedData = processMonthlyData(data);
+        setMonthlySummary(processedData);
+      }
+      
+      // If on trends tab, load weekly spending data
+      else if (activeTab === 'trends') {
+        const url = selectedFamilyMember 
+          ? `${API_URL}/api/reports/weekly?family_member_id=${selectedFamilyMember}`
+          : `${API_URL}/api/reports/weekly`;
+        
+        const response = await axios.get(url);
+        const data = response.data;
+        
+        // Process the weekly spending data
+        const processedData = processWeeklyData(data);
+        setWeeklySpending(processedData);
+        
+        // For category breakdown, we'll load expense data
+        const expenseUrl = selectedFamilyMember 
+          ? `${API_URL}/api/expenses?family_member_id=${selectedFamilyMember}`
+          : `${API_URL}/api/expenses`;
+        
+        const expenseResponse = await axios.get(expenseUrl);
+        const expenseData = expenseResponse.data;
+        
+        // Process the expense data by category
+        const categoryData = processCategoryData(expenseData);
+        setCategoryBreakdown(categoryData);
+      }
+    } catch (error) {
+      console.error('Error loading report data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load report data. Using mock data instead.",
+        variant: "destructive",
+      });
+      
+      // Use mock data as fallback
+      if (activeTab === 'overview') {
+        setMonthlySummary([
+          { name: 'Jan', income: 5000, expenses: 3500, savings: 1500 },
+          { name: 'Feb', income: 5500, expenses: 4000, savings: 1500 },
+          { name: 'Mar', income: 4800, expenses: 3600, savings: 1200 },
+          { name: 'Apr', income: 6000, expenses: 4200, savings: 1800 },
+          { name: 'May', income: 5800, expenses: 3900, savings: 1900 },
+          { name: 'Jun', income: 6200, expenses: 4500, savings: 1700 }
+        ]);
+      } else {
+        setWeeklySpending([
+          { name: 'Mon', amount: 120 },
+          { name: 'Tue', amount: 200 },
+          { name: 'Wed', amount: 150 },
+          { name: 'Thu', amount: 80 },
+          { name: 'Fri', amount: 300 },
+          { name: 'Sat', amount: 450 },
+          { name: 'Sun', amount: 180 }
+        ]);
+        
+        setCategoryBreakdown([
+          { name: 'Housing', value: 1200 },
+          { name: 'Food', value: 800 },
+          { name: 'Transportation', value: 400 },
+          { name: 'Entertainment', value: 300 },
+          { name: 'Utilities', value: 250 }
+        ]);
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const processMonthlyData = (data: any) => {
+    const { income = [], expenses = [] } = data;
+    const monthsMap = new Map<string, { name: string; income: number; expenses: number; savings: number }>();
+    
+    // Process income data
+    income.forEach((item: any) => {
+      const key = `${item.year}-${item.month}`;
+      const monthName = formatMonth(item.month, item.year);
+      
+      if (!monthsMap.has(key)) {
+        monthsMap.set(key, {
+          name: monthName,
+          income: 0,
+          expenses: 0,
+          savings: 0
+        });
+      }
+      
+      const current = monthsMap.get(key)!;
+      current.income = Number(item.total);
+      current.savings = current.income - current.expenses;
+      monthsMap.set(key, current);
+    });
+    
+    // Process expense data
+    expenses.forEach((item: any) => {
+      const key = `${item.year}-${item.month}`;
+      const monthName = formatMonth(item.month, item.year);
+      
+      if (!monthsMap.has(key)) {
+        monthsMap.set(key, {
+          name: monthName,
+          income: 0,
+          expenses: 0,
+          savings: 0
+        });
+      }
+      
+      const current = monthsMap.get(key)!;
+      current.expenses = Number(item.total);
+      current.savings = current.income - current.expenses;
+      monthsMap.set(key, current);
+    });
+    
+    // Convert to array and sort by date
+    const months = Array.from(monthsMap.values());
+    
+    // Sort months chronologically
+    months.sort((a, b) => {
+      const yearA = parseInt(a.name.split(' ')[1]);
+      const yearB = parseInt(b.name.split(' ')[1]);
+      
+      if (yearA !== yearB) return yearA - yearB;
+      
+      const monthOrder = {
+        'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6,
+        'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12
+      };
+      
+      const monthA = monthOrder[a.name.split(' ')[0] as keyof typeof monthOrder];
+      const monthB = monthOrder[b.name.split(' ')[0] as keyof typeof monthOrder];
+      
+      return monthA - monthB;
+    });
+    
+    return months;
+  };
+
+  const processWeeklyData = (data: any) => {
+    // Create an array for all days of the week
+    const days = [
+      { day_of_week: 1, name: 'Sun', amount: 0 },
+      { day_of_week: 2, name: 'Mon', amount: 0 },
+      { day_of_week: 3, name: 'Tue', amount: 0 },
+      { day_of_week: 4, name: 'Wed', amount: 0 },
+      { day_of_week: 5, name: 'Thu', amount: 0 },
+      { day_of_week: 6, name: 'Fri', amount: 0 },
+      { day_of_week: 7, name: 'Sat', amount: 0 }
+    ];
+    
+    // Fill in actual data
+    data.forEach((item: any) => {
+      const dayIndex = days.findIndex(d => d.day_of_week === item.day_of_week);
+      if (dayIndex !== -1) {
+        days[dayIndex].amount = Number(item.total);
+      }
+    });
+    
+    // Sort by day of week (starting with Monday)
+    const sortedDays = [...days.slice(1), days[0]];
+    
+    return sortedDays;
+  };
+
+  const processCategoryData = (data: any[]) => {
+    const categories: Record<string, number> = {};
+    
+    data.forEach(item => {
+      if (!categories[item.category]) {
+        categories[item.category] = 0;
+      }
+      categories[item.category] += Number(item.amount);
+    });
+    
+    const result = Object.entries(categories).map(([name, value]) => ({ name, value }));
+    
+    // Sort by value (highest first)
+    result.sort((a, b) => b.value - a.value);
+    
+    return result;
+  };
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+  };
+
+  const handleFamilyMemberChange = (value: string) => {
+    setSelectedFamilyMember(value);
+  };
+
+  // Find family member name by ID
+  const getFamilyMemberName = (id?: string) => {
+    if (!id) return "All Members";
+    const member = familyMembers.find(m => m.id === id);
+    return member ? member.name : "Unknown";
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <h2 className="text-2xl font-bold">Reports & Analytics</h2>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-2xl font-bold">Financial Reports</h2>
         
-        <div className="flex items-center space-x-2">
-          <span className="text-sm text-fintrack-text-secondary">Time Range:</span>
-          <Select defaultValue={timeRange} onValueChange={setTimeRange}>
-            <SelectTrigger className="w-[140px] bg-fintrack-bg-dark border-fintrack-bg-dark">
-              <SelectValue placeholder="Select range" />
-            </SelectTrigger>
-            <SelectContent className="bg-fintrack-card-dark border-fintrack-bg-dark">
-              <SelectItem value="week">This Week</SelectItem>
-              <SelectItem value="month">This Month</SelectItem>
-              <SelectItem value="quarter">This Quarter</SelectItem>
-              <SelectItem value="year">This Year</SelectItem>
-              <SelectItem value="custom">Custom Range</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        <Select 
+          value={selectedFamilyMember} 
+          onValueChange={handleFamilyMemberChange}
+        >
+          <SelectTrigger className="w-[180px] bg-fintrack-bg-dark border-fintrack-bg-dark">
+            <Filter className="h-4 w-4 mr-2" />
+            <SelectValue placeholder="All Members" />
+          </SelectTrigger>
+          <SelectContent className="bg-fintrack-card-dark border-fintrack-bg-dark">
+            <SelectItem value="">All Members</SelectItem>
+            {familyMembers.map((member) => (
+              <SelectItem key={member.id} value={member.id}>
+                {member.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
       
-      <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid grid-cols-2 md:grid-cols-4 bg-fintrack-bg-dark mb-4">
-          <TabsTrigger value="overview" className="data-[state=active]:bg-fintrack-purple/20">
-            <ChartPie className="h-4 w-4 mr-2" /> Overview
-          </TabsTrigger>
-          <TabsTrigger value="income" className="data-[state=active]:bg-fintrack-purple/20">
-            <IndianRupee className="h-4 w-4 mr-2" /> Income
-          </TabsTrigger>
-          <TabsTrigger value="expenses" className="data-[state=active]:bg-fintrack-purple/20">
-            <ArrowUpDown className="h-4 w-4 mr-2" /> Expenses
-          </TabsTrigger>
-          <TabsTrigger value="trends" className="data-[state=active]:bg-fintrack-purple/20">
-            <BarChart3 className="h-4 w-4 mr-2" /> Trends
-          </TabsTrigger>
+      <Tabs value={activeTab} onValueChange={handleTabChange}>
+        <TabsList className="mb-6">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="trends">Trends</TabsTrigger>
         </TabsList>
         
-        {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card className="card-gradient border-none">
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold">Monthly Summary</CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="h-[300px]">
+          {/* Monthly Summary Chart */}
+          <Card className="card-gradient border-none">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold">
+                Monthly Summary {selectedFamilyMember && `- ${getFamilyMemberName(selectedFamilyMember)}`}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="flex justify-center py-10">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-fintrack-purple"></div>
+                </div>
+              ) : (
+                <div className="h-80">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={monthlyComparisonData}>
-                      <Tooltip
+                    <BarChart data={monthlySummary}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#2a2e39" />
+                      <XAxis dataKey="name" stroke="#8c9aae" />
+                      <YAxis stroke="#8c9aae" />
+                      <Tooltip 
+                        formatter={(value: number) => [`₹${value.toFixed(2)}`, '']}
                         contentStyle={{
                           backgroundColor: '#1A1F2C',
                           borderColor: '#2a2e39',
+                          color: '#fff',
                           borderRadius: '8px',
                         }}
-                        formatter={(value) => [`₹${value}`, '']}
                       />
                       <Legend />
-                      <BarStack 
-                        keys={['income', 'expenses', 'savings']}
-                        colors={['#10B981', '#EF4444', '#9b87f5']}
-                        labels={['Income', 'Expenses', 'Savings']}
-                      />
+                      <Bar dataKey="income" name="Income" fill="#10B981" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="expenses" name="Expenses" fill="#EF4444" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="savings" name="Savings" fill="#8B5CF6" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
-              </CardContent>
-            </Card>
-            
-            <Card className="card-gradient border-none">
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold">Expense Breakdown</CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={expenseByCategory}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      >
-                        {expenseByCategory.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: '#1A1F2C',
-                          borderColor: '#2a2e39',
-                          borderRadius: '8px',
-                        }}
-                        formatter={(value) => [`₹${value}`, '']}
-                      />
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+              )}
+            </CardContent>
+          </Card>
           
+          {/* Income vs Expenses Summary */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {monthlySummary.length > 0 && (
+              <>
+                <Card className="card-gradient border-none">
+                  <CardHeader>
+                    <CardTitle className="text-sm font-medium">Total Income</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-green-500">
+                      ₹{monthlySummary.reduce((sum, item) => sum + (item.income || 0), 0).toFixed(2)}
+                    </div>
+                    <p className="text-sm text-fintrack-text-secondary">Last 6 months</p>
+                  </CardContent>
+                </Card>
+                
+                <Card className="card-gradient border-none">
+                  <CardHeader>
+                    <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-red-500">
+                      ₹{monthlySummary.reduce((sum, item) => sum + (item.expenses || 0), 0).toFixed(2)}
+                    </div>
+                    <p className="text-sm text-fintrack-text-secondary">Last 6 months</p>
+                  </CardContent>
+                </Card>
+                
+                <Card className="card-gradient border-none">
+                  <CardHeader>
+                    <CardTitle className="text-sm font-medium">Net Savings</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-fintrack-purple">
+                      ₹{monthlySummary.reduce((sum, item) => sum + (item.savings || 0), 0).toFixed(2)}
+                    </div>
+                    <p className="text-sm text-fintrack-text-secondary">Last 6 months</p>
+                  </CardContent>
+                </Card>
+              </>
+            )}
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="trends" className="space-y-6">
+          {/* Weekly Spending Pattern */}
           <Card className="card-gradient border-none">
             <CardHeader>
-              <CardTitle className="text-lg font-semibold">Financial Health Indicators</CardTitle>
+              <CardTitle className="text-lg font-semibold">
+                Weekly Spending Pattern {selectedFamilyMember && `- ${getFamilyMemberName(selectedFamilyMember)}`}
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-fintrack-bg-dark p-4 rounded-xl">
-                  <div className="text-sm text-fintrack-text-secondary mb-1">Savings Rate</div>
-                  <div className="text-xl font-bold text-fintrack-purple">41.5%</div>
-                  <div className="text-xs text-green-500 flex items-center mt-1">
-                    <span>↑ 4.2% vs last month</span>
-                  </div>
+              {isLoading ? (
+                <div className="flex justify-center py-10">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-fintrack-purple"></div>
                 </div>
-                <div className="bg-fintrack-bg-dark p-4 rounded-xl">
-                  <div className="text-sm text-fintrack-text-secondary mb-1">Income Growth</div>
-                  <div className="text-xl font-bold text-green-500">8.3%</div>
-                  <div className="text-xs text-green-500 flex items-center mt-1">
-                    <span>↑ 1.5% vs last month</span>
-                  </div>
-                </div>
-                <div className="bg-fintrack-bg-dark p-4 rounded-xl">
-                  <div className="text-sm text-fintrack-text-secondary mb-1">Budget Adherence</div>
-                  <div className="text-xl font-bold text-green-500">92%</div>
-                  <div className="text-xs text-green-500 flex items-center mt-1">
-                    <span>↑ 3% vs last month</span>
-                  </div>
-                </div>
-                <div className="bg-fintrack-bg-dark p-4 rounded-xl">
-                  <div className="text-sm text-fintrack-text-secondary mb-1">Debt-to-Income</div>
-                  <div className="text-xl font-bold text-fintrack-purple">18.2%</div>
-                  <div className="text-xs text-green-500 flex items-center mt-1">
-                    <span>↓ 2.1% vs last month</span>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        {/* Income Tab */}
-        <TabsContent value="income" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card className="card-gradient border-none">
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold">Income Sources</CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="h-[300px]">
+              ) : (
+                <div className="h-60">
                   <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={incomeSourcesData}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      >
-                        {incomeSourcesData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
+                    <BarChart data={weeklySpending}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#2a2e39" />
+                      <XAxis dataKey="name" stroke="#8c9aae" />
+                      <YAxis stroke="#8c9aae" />
                       <Tooltip
+                        formatter={(value: number) => [`₹${value.toFixed(2)}`, 'Amount']}
                         contentStyle={{
                           backgroundColor: '#1A1F2C',
                           borderColor: '#2a2e39',
+                          color: '#fff',
                           borderRadius: '8px',
                         }}
-                        formatter={(value) => [`₹${value}`, '']}
                       />
-                      <Legend />
-                    </PieChart>
+                      <Bar dataKey="amount" name="Spending" fill="#8B5CF6" radius={[4, 4, 0, 0]} />
+                    </BarChart>
                   </ResponsiveContainer>
                 </div>
-              </CardContent>
-            </Card>
-            
-            <Card className="card-gradient border-none">
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold">Income Trends</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="bg-fintrack-bg-dark p-4 rounded-xl">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <div className="text-sm text-fintrack-text-secondary mb-1">Monthly Average</div>
-                        <div className="text-xl font-bold text-green-500">₹5,567</div>
-                      </div>
-                      <div className="text-xs text-green-500">↑ 8.3% vs last month</div>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-fintrack-bg-dark p-4 rounded-xl">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <div className="text-sm text-fintrack-text-secondary mb-1">Highest Income Month</div>
-                        <div className="text-xl font-bold text-green-500">₹6,000 (March)</div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-fintrack-bg-dark p-4 rounded-xl">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <div className="text-sm text-fintrack-text-secondary mb-1">Lowest Income Month</div>
-                        <div className="text-xl font-bold text-fintrack-text-secondary">₹5,000 (January)</div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-fintrack-bg-dark p-4 rounded-xl">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <div className="text-sm text-fintrack-text-secondary mb-1">Year-to-Date Income</div>
-                        <div className="text-xl font-bold text-green-500">₹33,400</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-        
-        {/* Expenses Tab */}
-        <TabsContent value="expenses" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card className="card-gradient border-none">
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold">Top Spending Categories</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {expenseByCategory.slice(0, 5).map((category, index) => (
-                    <div key={index} className="bg-fintrack-bg-dark p-4 rounded-xl">
-                      <div className="flex justify-between items-center">
-                        <div className="font-medium">{category.name}</div>
-                        <div className="text-red-500 font-medium">₹{category.value}</div>
-                      </div>
-                      <div className="w-full h-2 bg-fintrack-bg-dark/50 rounded-full overflow-hidden mt-2">
-                        <div 
-                          className="h-full" 
-                          style={{ 
-                            width: `${(category.value / expenseByCategory.reduce((sum, cat) => sum + cat.value, 0)) * 100}%`,
-                            backgroundColor: category.color 
-                          }}
-                        ></div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card className="card-gradient border-none">
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold">Expense Metrics</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="bg-fintrack-bg-dark p-4 rounded-xl">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <div className="text-sm text-fintrack-text-secondary mb-1">Monthly Average</div>
-                        <div className="text-xl font-bold text-red-500">₹3,466</div>
-                      </div>
-                      <div className="text-xs text-green-500">↓ 2.1% vs last month</div>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-fintrack-bg-dark p-4 rounded-xl">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <div className="text-sm text-fintrack-text-secondary mb-1">Highest Expense Month</div>
-                        <div className="text-xl font-bold text-red-500">₹3,800 (March)</div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-fintrack-bg-dark p-4 rounded-xl">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <div className="text-sm text-fintrack-text-secondary mb-1">Fixed vs Variable Expenses</div>
-                        <div className="text-xl font-bold text-fintrack-text-secondary">65% / 35%</div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-fintrack-bg-dark p-4 rounded-xl">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <div className="text-sm text-fintrack-text-secondary mb-1">Year-to-Date Expenses</div>
-                        <div className="text-xl font-bold text-red-500">₹20,800</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-        
-        {/* Trends Tab */}
-        <TabsContent value="trends" className="space-y-6">
-          <Card className="card-gradient border-none">
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold">Weekly Spending Patterns</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="h-[400px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={spendingTrendsData}>
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: '#1A1F2C',
-                        borderColor: '#2a2e39',
-                        borderRadius: '8px',
-                      }}
-                      formatter={(value) => [`₹${value}`, '']}
-                    />
-                    <Legend />
-                    <BarStack 
-                      keys={Object.keys(spendingTrendsData[0]).filter(key => key !== 'name')}
-                      colors={Object.values(spendingColors)}
-                      labels={Object.keys(spendingTrendsData[0]).filter(key => key !== 'name')}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+              )}
             </CardContent>
           </Card>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card className="card-gradient border-none">
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold">Savings Trend</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {monthlyComparisonData.map((month, index) => {
-                    const savingsRate = ((month.savings / month.income) * 100).toFixed(1);
-                    return (
-                      <div key={index} className="flex justify-between items-center">
-                        <div className="font-medium">{month.name}</div>
-                        <div className="text-sm">
-                          <span className="text-fintrack-purple font-medium">₹{month.savings}</span>
-                          <span className="text-fintrack-text-secondary ml-2">({savingsRate}%)</span>
+          {/* Expense by Category */}
+          <Card className="card-gradient border-none">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold">
+                Expenses by Category {selectedFamilyMember && `- ${getFamilyMemberName(selectedFamilyMember)}`}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="flex justify-center py-10">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-fintrack-purple"></div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="h-[300px] flex items-center justify-center">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={categoryBreakdown}
+                          dataKey="value"
+                          nameKey="name"
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={100}
+                          fill="#8884d8"
+                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        >
+                          {categoryBreakdown.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          formatter={(value: number) => [`₹${value.toFixed(2)}`, 'Amount']}
+                          contentStyle={{
+                            backgroundColor: '#1A1F2C',
+                            borderColor: '#2a2e39',
+                            color: '#fff',
+                            borderRadius: '8px',
+                          }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  
+                  <div className="self-center">
+                    <div className="space-y-3">
+                      {categoryBreakdown.map((item, index) => (
+                        <div key={index} className="flex justify-between items-center">
+                          <div className="flex items-center">
+                            <div
+                              className="w-3 h-3 rounded-full mr-2"
+                              style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                            ></div>
+                            <span>{item.name}</span>
+                          </div>
+                          <div className="font-medium">₹{item.value.toFixed(2)}</div>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card className="card-gradient border-none">
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold">Financial Insights</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="bg-fintrack-bg-dark p-4 rounded-xl">
-                    <div className="font-medium mb-1">You're saving more than last month</div>
-                    <div className="text-sm text-fintrack-text-secondary">Your savings increased by 26% compared to last month. Keep it up!</div>
-                  </div>
-                  <div className="bg-fintrack-bg-dark p-4 rounded-xl">
-                    <div className="font-medium mb-1">Entertainment expenses are rising</div>
-                    <div className="text-sm text-fintrack-text-secondary">Your entertainment expenses increased by 15% this month. Consider reviewing this category.</div>
-                  </div>
-                  <div className="bg-fintrack-bg-dark p-4 rounded-xl">
-                    <div className="font-medium mb-1">Food budget well managed</div>
-                    <div className="text-sm text-fintrack-text-secondary">You're consistently staying under your food budget. Good job!</div>
+                      ))}
+                      
+                      {categoryBreakdown.length > 0 && (
+                        <div className="flex justify-between items-center pt-2 border-t border-fintrack-bg-dark">
+                          <div className="font-medium">Total</div>
+                          <div className="font-medium">
+                            ₹{categoryBreakdown.reduce((sum, item) => sum + item.value, 0).toFixed(2)}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>
   );
 };
 
-export default ReportsPage;
+export default Reports;

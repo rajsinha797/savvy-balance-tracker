@@ -9,6 +9,7 @@ import {
   DollarSign, 
   Settings, 
   User,
+  Users,
   LogOut
 } from 'lucide-react';
 
@@ -28,9 +29,19 @@ const Sidebar = () => {
       icon: <Home className="h-5 w-5" />
     },
     { 
+      name: 'Family Members', 
+      path: '/family',
+      icon: <Users className="h-5 w-5" /> 
+    },
+    { 
       name: 'Income', 
       path: '/income',
       icon: <DollarSign className="h-5 w-5" /> 
+    },
+    { 
+      name: 'Budget', 
+      path: '/budget',
+      icon: <PieChart className="h-5 w-5" />
     },
     { 
       name: 'Expenses', 
@@ -41,11 +52,6 @@ const Sidebar = () => {
       name: 'Reports', 
       path: '/reports',
       icon: <BarChart className="h-5 w-5" /> 
-    },
-    { 
-      name: 'Budget', 
-      path: '/budget',
-      icon: <PieChart className="h-5 w-5" />
     }
   ];
 

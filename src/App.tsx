@@ -11,6 +11,7 @@ import Income from "@/pages/Income";
 import Expenses from "@/pages/Expenses";
 import Reports from "@/pages/Reports";
 import Budget from "@/pages/Budget";
+import FamilyMembers from "@/pages/FamilyMembers";
 import NotFoundPage from "@/pages/NotFoundPage";
 import NotFound from "./pages/NotFound";
 
@@ -25,10 +26,11 @@ const App = () => (
         <Routes>
           <Route element={<Layout />}>
             <Route path="/" element={<Dashboard />} />
+            <Route path="/family" element={<FamilyMembers />} />
             <Route path="/income" element={<Income />} />
+            <Route path="/budget" element={<Budget />} />
             <Route path="/expenses" element={<Expenses />} />
             <Route path="/reports" element={<Reports />} />
-            <Route path="/budget" element={<Budget />} />
           </Route>
           <Route path="/404" element={<NotFoundPage />} />
           <Route path="*" element={<NotFound />} />
