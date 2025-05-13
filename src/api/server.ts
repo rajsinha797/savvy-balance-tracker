@@ -1,5 +1,5 @@
 
-import express from 'express';
+import express, { Request, Response } from 'express';
 import cors from 'cors';
 import mysql from 'mysql2/promise';
 
@@ -21,7 +21,7 @@ const pool = mysql.createPool({
 });
 
 // Test database connection
-app.get('/api/test', async (req, res) => {
+app.get('/api/test', async (req: Request, res: Response) => {
   try {
     const [rows] = await pool.query('SELECT 1 as test');
     res.json({ status: 'success', message: 'Database connected successfully', data: rows });
@@ -32,7 +32,7 @@ app.get('/api/test', async (req, res) => {
 });
 
 // Get all income categories
-app.get('/api/income/categories', async (req, res) => {
+app.get('/api/income/categories', async (req: Request, res: Response) => {
   try {
     const [rows] = await pool.query('SELECT * FROM income_category');
     res.json(rows);
@@ -43,7 +43,7 @@ app.get('/api/income/categories', async (req, res) => {
 });
 
 // Get all incomes
-app.get('/api/income', async (req, res) => {
+app.get('/api/income', async (req: Request, res: Response) => {
   try {
     const query = `
       SELECT i.income_id as id, i.amount, i.date, i.description, ic.name as category
@@ -60,7 +60,7 @@ app.get('/api/income', async (req, res) => {
 });
 
 // Get income by ID
-app.get('/api/income/:id', async (req, res) => {
+app.get('/api/income/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const query = `
@@ -83,7 +83,7 @@ app.get('/api/income/:id', async (req, res) => {
 });
 
 // Add new income
-app.post('/api/income', async (req, res) => {
+app.post('/api/income', async (req: Request, res: Response) => {
   try {
     const { amount, category_id, date, description } = req.body;
     
@@ -105,8 +105,8 @@ app.post('/api/income', async (req, res) => {
       description
     ]);
     
-    // @ts-ignore
-    const id = result.insertId;
+    const resultWithInsertId = result as mysql.ResultSetHeader;
+    const id = resultWithInsertId.insertId;
     
     res.status(201).json({ 
       status: 'success', 
@@ -120,7 +120,7 @@ app.post('/api/income', async (req, res) => {
 });
 
 // Update income
-app.put('/api/income/:id', async (req, res) => {
+app.put('/api/income/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { amount, category_id, date, description } = req.body;
@@ -139,8 +139,8 @@ app.put('/api/income/:id', async (req, res) => {
       id
     ]);
     
-    // @ts-ignore
-    if (result.affectedRows === 0) {
+    const resultHeader = result as mysql.ResultSetHeader;
+    if (resultHeader.affectedRows === 0) {
       return res.status(404).json({ status: 'error', message: 'Income not found' });
     }
     
@@ -152,15 +152,15 @@ app.put('/api/income/:id', async (req, res) => {
 });
 
 // Delete income
-app.delete('/api/income/:id', async (req, res) => {
+app.delete('/api/income/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     
     const query = 'DELETE FROM income WHERE income_id = ?';
     const [result] = await pool.query(query, [id]);
     
-    // @ts-ignore
-    if (result.affectedRows === 0) {
+    const resultHeader = result as mysql.ResultSetHeader;
+    if (resultHeader.affectedRows === 0) {
       return res.status(404).json({ status: 'error', message: 'Income not found' });
     }
     
