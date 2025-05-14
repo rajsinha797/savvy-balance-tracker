@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
@@ -31,7 +30,7 @@ const IncomePage = () => {
   const [incomes, setIncomes] = useState<IncomeItem[]>([]);
   const [categories, setCategories] = useState<IncomeCategory[]>([]);
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
-  const [selectedFamilyMember, setSelectedFamilyMember] = useState<string>("");
+  const [selectedFamilyMember, setSelectedFamilyMember] = useState<string>("all-members");
   const [isLoading, setIsLoading] = useState(true);
   
   // New income form data state
@@ -49,8 +48,8 @@ const IncomePage = () => {
     family_member_id: '' 
   });
   
-  // State for editing income
-  const [editingIncome, setEditingIncome] = useState<(IncomeItem & { category_id: number, family_member_id?: string }) | null>(null);
+  // State for editing income - ensure family_member_id is always defined 
+  const [editingIncome, setEditingIncome] = useState<(IncomeItem & { category_id: number, family_member_id: string }) | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   useEffect(() => {
@@ -249,7 +248,8 @@ const IncomePage = () => {
     setEditingIncome({
       ...income,
       category_id: categoryId,
-      family_member_id: income.family_member_id
+      // Ensure family_member_id is always defined, default to empty string if not available
+      family_member_id: income.family_member_id || ''
     });
     setIsDialogOpen(true);
   };
@@ -294,7 +294,7 @@ const IncomePage = () => {
         totalIncome={totalIncome}
         averageIncome={averageIncome}
         entriesCount={incomes.length}
-        selectedFamilyMemberName={selectedFamilyMember ? getFamilyMemberName(selectedFamilyMember) : null}
+        selectedFamilyMemberName={selectedFamilyMember !== 'all-members' ? getFamilyMemberName(selectedFamilyMember) : null}
       />
       
       {/* Income Entries */}
