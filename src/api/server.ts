@@ -1,15 +1,22 @@
-
 import express from 'express';
 import cors from 'cors';
 import mysql from 'mysql2/promise';
 import { Request, Response } from 'express';
 import { ParamsDictionary } from 'express-serve-static-core';
 import { ParsedQs } from 'qs';
+import fs from 'fs';
+import path from 'path';
 
 const app = express();
 const port = 3001;
 
-app.use(cors());
+// Enhanced CORS configuration
+app.use(cors({
+  origin: ['http://localhost:5173', 'http://localhost:3000'], // Add your frontend URLs
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(express.json());
 
 // Create MySQL connection pool
@@ -21,6 +28,29 @@ const pool = mysql.createPool({
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
+});
+
+// Middleware for error handling
+const errorHandler = (err: any, req: Request, res: Response, next: Function) => {
+  console.error('API Error:', err.stack);
+  res.status(500).json({
+    status: 'error',
+    message: 'Internal server error',
+    error: process.env.NODE_ENV === 'development' ? err.message : undefined
+  });
+};
+
+// API Documentation endpoint
+app.get('/api/docs', (req: Request, res: Response) => {
+  const docsPath = path.join(__dirname, 'api-docs.md');
+  
+  // Check if docs file exists
+  if (fs.existsSync(docsPath)) {
+    const docs = fs.readFileSync(docsPath, 'utf8');
+    res.type('text/markdown').send(docs);
+  } else {
+    res.status(404).json({ status: 'error', message: 'Documentation not found' });
+  }
 });
 
 // Test database connection
@@ -309,11 +339,140 @@ app.delete('/api/expenses/:id', async (req: Request<ParamsDictionary>, res: Resp
   }
 });
 
-// Family members API endpoints
+// FAMILY API ENDPOINTS - Enhanced and expanded
+
+// Get all families
+app.get('/api/families', async (req: Request, res: Response) => {
+  try {
+    const query = `SELECT family_id, name FROM family`;
+    const [rows] = await pool.query(query);
+    res.json(rows);
+  } catch (error) {
+    console.error('Error fetching families:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to fetch families' });
+  }
+});
+
+// Get family by ID
+app.get('/api/families/:id', async (req: Request<ParamsDictionary>, res: Response) => {
+  try {
+    const { id } = req.params;
+    const query = `SELECT family_id, name FROM family WHERE family_id = ?`;
+    const [rows] = await pool.query(query, [id]);
+    
+    if (Array.isArray(rows) && rows.length === 0) {
+      res.status(404).json({ status: 'error', message: 'Family not found' });
+      return;
+    }
+    
+    res.json(rows[0]);
+  } catch (error) {
+    console.error('Error fetching family by ID:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to fetch family' });
+  }
+});
+
+// Add a new family
+app.post('/api/families', async (req: Request, res: Response) => {
+  try {
+    const { name } = req.body;
+    
+    if (!name) {
+      res.status(400).json({ status: 'error', message: 'Family name is required' });
+      return;
+    }
+    
+    const query = `INSERT INTO family (name) VALUES (?)`;
+    const [result] = await pool.query(query, [name]);
+    
+    const resultWithInsertId = result as mysql.ResultSetHeader;
+    const id = resultWithInsertId.insertId;
+    
+    res.status(201).json({ 
+      status: 'success', 
+      message: 'Family created successfully',
+      id
+    });
+  } catch (error) {
+    console.error('Error adding family:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to create family' });
+  }
+});
+
+// Update family
+app.put('/api/families/:id', async (req: Request<ParamsDictionary>, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { name } = req.body;
+    
+    if (!name) {
+      res.status(400).json({ status: 'error', message: 'Family name is required' });
+      return;
+    }
+    
+    const query = `UPDATE family SET name = ? WHERE family_id = ?`;
+    const [result] = await pool.query(query, [name, id]);
+    
+    const resultHeader = result as mysql.ResultSetHeader;
+    if (resultHeader.affectedRows === 0) {
+      res.status(404).json({ status: 'error', message: 'Family not found' });
+      return;
+    }
+    
+    res.json({ status: 'success', message: 'Family updated successfully' });
+  } catch (error) {
+    console.error('Error updating family:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to update family' });
+  }
+});
+
+// Delete family
+app.delete('/api/families/:id', async (req: Request<ParamsDictionary>, res: Response) => {
+  try {
+    const { id } = req.params;
+    
+    // Check if family has members first
+    const [memberCheck] = await pool.query('SELECT COUNT(*) as memberCount FROM family_members WHERE family_id = ?', [id]);
+    
+    // @ts-ignore
+    if (Array.isArray(memberCheck) && memberCheck[0].memberCount > 0) {
+      res.status(400).json({ 
+        status: 'error', 
+        message: 'Cannot delete family with existing members. Remove members first.' 
+      });
+      return;
+    }
+    
+    const query = 'DELETE FROM family WHERE family_id = ?';
+    const [result] = await pool.query(query, [id]);
+    
+    const resultHeader = result as mysql.ResultSetHeader;
+    if (resultHeader.affectedRows === 0) {
+      res.status(404).json({ status: 'error', message: 'Family not found' });
+      return;
+    }
+    
+    res.json({ status: 'success', message: 'Family deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting family:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to delete family' });
+  }
+});
+
+// Family members API endpoints - Enhanced with better error handling and validation
 app.get('/api/family/members', async (req: Request, res: Response) => {
   try {
-    const query = `SELECT id, family_id, name, relationship, is_default FROM family_members`;
-    const [rows] = await pool.query(query);
+    const familyId = req.query.family_id || 1; // Default to family ID 1 if not specified
+    
+    const query = `
+      SELECT fm.id, fm.family_id, fm.name, fm.relationship, fm.is_default, 
+             f.name as family_name
+      FROM family_members fm
+      JOIN family f ON fm.family_id = f.family_id
+      WHERE fm.family_id = ?
+    `;
+    
+    const [rows] = await pool.query(query, [familyId]);
     res.json(rows);
   } catch (error) {
     console.error('Error fetching family members:', error);
@@ -324,7 +483,14 @@ app.get('/api/family/members', async (req: Request, res: Response) => {
 app.get('/api/family/members/:id', async (req: Request<ParamsDictionary>, res: Response) => {
   try {
     const { id } = req.params;
-    const query = `SELECT id, family_id, name, relationship, is_default FROM family_members WHERE id = ?`;
+    const query = `
+      SELECT fm.id, fm.family_id, fm.name, fm.relationship, fm.is_default,
+             f.name as family_name
+      FROM family_members fm
+      JOIN family f ON fm.family_id = f.family_id
+      WHERE fm.id = ?
+    `;
+    
     const [rows] = await pool.query(query, [id]);
     
     if (Array.isArray(rows) && rows.length === 0) {
@@ -341,11 +507,30 @@ app.get('/api/family/members/:id', async (req: Request<ParamsDictionary>, res: R
 
 app.post('/api/family/members', async (req: Request, res: Response) => {
   try {
-    const { name, relationship, is_default } = req.body;
+    const { name, relationship, is_default, family_id = 1 } = req.body;
+    
+    // Validate required fields
+    if (!name || !relationship) {
+      res.status(400).json({ 
+        status: 'error', 
+        message: 'Name and relationship are required fields' 
+      });
+      return;
+    }
+    
+    // Check if family exists first
+    const [familyCheck] = await pool.query('SELECT family_id FROM family WHERE family_id = ?', [family_id]);
+    if (Array.isArray(familyCheck) && familyCheck.length === 0) {
+      res.status(400).json({ 
+        status: 'error', 
+        message: 'The specified family does not exist' 
+      });
+      return;
+    }
     
     // If this is set as default, unset any previous defaults
     if (is_default) {
-      await pool.query('UPDATE family_members SET is_default = 0 WHERE family_id = 1');
+      await pool.query('UPDATE family_members SET is_default = 0 WHERE family_id = ?', [family_id]);
     }
     
     const query = `
@@ -353,7 +538,7 @@ app.post('/api/family/members', async (req: Request, res: Response) => {
       VALUES (?, ?, ?, ?)
     `;
     
-    const [result] = await pool.query(query, [1, name, relationship, is_default]);
+    const [result] = await pool.query(query, [family_id, name, relationship, is_default]);
     
     const resultWithInsertId = result as mysql.ResultSetHeader;
     const id = resultWithInsertId.insertId;
@@ -372,20 +557,52 @@ app.post('/api/family/members', async (req: Request, res: Response) => {
 app.put('/api/family/members/:id', async (req: Request<ParamsDictionary>, res: Response) => {
   try {
     const { id } = req.params;
-    const { name, relationship, is_default } = req.body;
+    const { name, relationship, is_default, family_id } = req.body;
     
-    // If this is set as default, unset any previous defaults
+    // Validate required fields
+    if (!name || !relationship) {
+      res.status(400).json({ 
+        status: 'error', 
+        message: 'Name and relationship are required fields' 
+      });
+      return;
+    }
+    
+    // Get current family ID for this member
+    const [currentData] = await pool.query('SELECT family_id FROM family_members WHERE id = ?', [id]);
+    if (Array.isArray(currentData) && currentData.length === 0) {
+      res.status(404).json({ status: 'error', message: 'Family member not found' });
+      return;
+    }
+    
+    // @ts-ignore
+    const currentFamilyId = currentData[0].family_id;
+    const targetFamilyId = family_id || currentFamilyId;
+    
+    // Check if target family exists if changing family
+    if (family_id && family_id !== currentFamilyId) {
+      const [familyCheck] = await pool.query('SELECT family_id FROM family WHERE family_id = ?', [family_id]);
+      if (Array.isArray(familyCheck) && familyCheck.length === 0) {
+        res.status(400).json({ 
+          status: 'error', 
+          message: 'The specified target family does not exist' 
+        });
+        return;
+      }
+    }
+    
+    // If this is set as default, unset any previous defaults in the family
     if (is_default) {
-      await pool.query('UPDATE family_members SET is_default = 0 WHERE family_id = 1');
+      await pool.query('UPDATE family_members SET is_default = 0 WHERE family_id = ?', [targetFamilyId]);
     }
     
     const query = `
       UPDATE family_members
-      SET name = ?, relationship = ?, is_default = ?
+      SET name = ?, relationship = ?, is_default = ?, family_id = ?
       WHERE id = ?
     `;
     
-    const [result] = await pool.query(query, [name, relationship, is_default, id]);
+    const [result] = await pool.query(query, [name, relationship, is_default, targetFamilyId, id]);
     
     const resultHeader = result as mysql.ResultSetHeader;
     if (resultHeader.affectedRows === 0) {
@@ -405,13 +622,30 @@ app.delete('/api/family/members/:id', async (req: Request<ParamsDictionary>, res
     const { id } = req.params;
     
     // Check if this is a default member
-    const [defaultCheck] = await pool.query('SELECT is_default FROM family_members WHERE id = ?', [id]);
-    if (Array.isArray(defaultCheck) && defaultCheck.length > 0) {
-      // @ts-ignore
-      if (defaultCheck[0].is_default) {
-        res.status(400).json({ status: 'error', message: 'Cannot delete the default family member' });
-        return;
-      }
+    const [memberCheck] = await pool.query('SELECT is_default, family_id FROM family_members WHERE id = ?', [id]);
+    
+    if (Array.isArray(memberCheck) && memberCheck.length === 0) {
+      res.status(404).json({ status: 'error', message: 'Family member not found' });
+      return;
+    }
+    
+    // @ts-ignore
+    if (memberCheck[0].is_default) {
+      res.status(400).json({ status: 'error', message: 'Cannot delete the default family member' });
+      return;
+    }
+    
+    // Check if member has any transactions
+    const [incomeCheck] = await pool.query('SELECT COUNT(*) as count FROM income WHERE family_member_id = ?', [id]);
+    const [expenseCheck] = await pool.query('SELECT COUNT(*) as count FROM expenses WHERE family_member_id = ?', [id]);
+    
+    // @ts-ignore
+    if ((incomeCheck[0].count > 0) || (expenseCheck[0].count > 0)) {
+      res.status(400).json({ 
+        status: 'error', 
+        message: 'Cannot delete family member with existing transactions' 
+      });
+      return;
     }
     
     const query = 'DELETE FROM family_members WHERE id = ?';
@@ -520,9 +754,13 @@ app.get('/api/reports/weekly', async (req: Request, res: Response) => {
   }
 });
 
+// Apply error handling middleware
+app.use(errorHandler);
+
 // Start the server
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
+  console.log(`API Documentation available at http://localhost:${port}/api/docs`);
 });
 
 export default app;
