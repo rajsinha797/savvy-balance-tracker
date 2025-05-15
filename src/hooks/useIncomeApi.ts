@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   IncomeItem, 
   IncomeCategory,
@@ -9,168 +9,167 @@ import {
   updateIncome, 
   deleteIncome 
 } from '@/services/incomeService';
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 
-export const useIncomeApi = () => {
+export const useIncomeApi = (familyMemberId?: string) => {
   const { toast } = useToast();
-  const [incomes, setIncomes] = useState<IncomeItem[]>([]);
-  const [categories, setCategories] = useState<IncomeCategory[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isApiAvailable, setIsApiAvailable] = useState<boolean | null>(null);
-
-  // Load initial data
-  const loadData = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      // Load income categories
-      const categoriesData = await getIncomeCategories();
-      setCategories(categoriesData);
-      
-      // Load income data
-      const incomesData = await getAllIncomes();
-      setIncomes(incomesData);
-      
-      // If we got here without error, API is available
-      setIsApiAvailable(true);
-    } catch (error) {
-      console.error('Error loading data:', error);
-      setIsApiAvailable(false);
+  const queryClient = useQueryClient();
+  
+  // Query for fetching incomes
+  const { 
+    data: incomes = [], 
+    isLoading: isIncomesLoading,
+    isError: isIncomesError,
+    refetch: refetchIncomes
+  } = useQuery({
+    queryKey: ['incomes', familyMemberId],
+    queryFn: () => getAllIncomes(familyMemberId),
+    onError: (error) => {
+      console.error('Error fetching incomes:', error);
       toast({
-        title: "API Error",
-        description: "Could not connect to API server. Using demo data instead.",
+        title: "Error",
+        description: "Failed to load income data. Using demo data instead.",
         variant: "destructive",
       });
-    } finally {
-      setIsLoading(false);
     }
-  }, [toast]);
+  });
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  // Query for fetching categories
+  const {
+    data: categories = [],
+    isLoading: isCategoriesLoading,
+    isError: isCategoriesError
+  } = useQuery({
+    queryKey: ['incomeCategories'],
+    queryFn: getIncomeCategories,
+    onError: (error) => {
+      console.error('Error fetching income categories:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load income categories. Using demo categories instead.",
+        variant: "destructive",
+      });
+    }
+  });
 
-  // Add income
-  const addIncomeItem = async (newIncomeData: {
-    amount: number;
-    category_id: number;
-    description: string;
-    date: string;
-  }) => {
-    try {
-      const result = await addIncome(newIncomeData);
-      
+  // Mutation for adding income
+  const addIncomeMutation = useMutation({
+    mutationFn: (newIncomeData: {
+      amount: number;
+      category_id: number;
+      description: string;
+      date: string;
+      family_member_id?: string;
+    }) => addIncome(newIncomeData),
+    onSuccess: (result) => {
       if (result.success) {
-        await loadData(); // Refresh the data
+        // Invalidate queries to refetch data
+        queryClient.invalidateQueries({ queryKey: ['incomes'] });
         
         toast({
           title: "Success",
           description: result.message || "Income added successfully",
         });
-        
-        return true;
       } else {
         toast({
           title: "Error",
           description: result.message || "Failed to add income",
           variant: "destructive",
         });
-        return false;
       }
-    } catch (error) {
+    },
+    onError: (error) => {
       console.error('Error adding income:', error);
       toast({
         title: "Error",
-        description: "An unexpected error occurred",
+        description: "An unexpected error occurred while adding income",
         variant: "destructive",
       });
-      return false;
     }
-  };
+  });
 
-  // Update income
-  const updateIncomeItem = async (id: string, incomeData: {
-    amount: number;
-    category_id: number;
-    description: string;
-    date: string;
-  }) => {
-    try {
-      const result = await updateIncome(id, incomeData);
-      
+  // Mutation for updating income
+  const updateIncomeMutation = useMutation({
+    mutationFn: ({id, incomeData}: {
+      id: string; 
+      incomeData: {
+        amount: number;
+        category_id: number;
+        description: string;
+        date: string;
+        family_member_id?: string;
+      }
+    }) => updateIncome(id, incomeData),
+    onSuccess: (result) => {
       if (result.success) {
-        await loadData(); // Refresh the data
+        // Invalidate queries to refetch data
+        queryClient.invalidateQueries({ queryKey: ['incomes'] });
         
         toast({
           title: "Success",
           description: result.message,
         });
-        
-        return true;
       } else {
         toast({
           title: "Error",
           description: result.message,
           variant: "destructive",
         });
-        return false;
       }
-    } catch (error) {
+    },
+    onError: (error) => {
       console.error('Error updating income:', error);
       toast({
         title: "Error",
-        description: "An unexpected error occurred",
+        description: "An unexpected error occurred while updating income",
         variant: "destructive",
       });
-      return false;
     }
-  };
+  });
 
-  // Delete income
-  const deleteIncomeItem = async (id: string) => {
-    try {
-      const result = await deleteIncome(id);
-      
+  // Mutation for deleting income
+  const deleteIncomeMutation = useMutation({
+    mutationFn: (id: string) => deleteIncome(id),
+    onSuccess: (result) => {
       if (result.success) {
-        await loadData(); // Refresh the data
+        // Invalidate queries to refetch data
+        queryClient.invalidateQueries({ queryKey: ['incomes'] });
         
         toast({
           title: "Success",
           description: result.message,
         });
-        
-        return true;
       } else {
         toast({
           title: "Error",
           description: result.message,
           variant: "destructive",
         });
-        return false;
       }
-    } catch (error) {
+    },
+    onError: (error) => {
       console.error('Error deleting income:', error);
       toast({
         title: "Error",
-        description: "An unexpected error occurred",
+        description: "An unexpected error occurred while deleting income",
         variant: "destructive",
       });
-      return false;
     }
-  };
+  });
 
-  // Get API status
-  const refreshData = () => {
-    return loadData();
-  };
+  const isLoading = isIncomesLoading || isCategoriesLoading;
+  const isError = isIncomesError || isCategoriesError;
+  const isApiAvailable = incomes.length > 0 || categories.length > 0;
 
   return {
     incomes,
     categories,
     isLoading,
+    isError,
     isApiAvailable,
-    addIncomeItem,
-    updateIncomeItem,
-    deleteIncomeItem,
-    refreshData
+    addIncome: addIncomeMutation.mutate,
+    updateIncome: updateIncomeMutation.mutate,
+    deleteIncome: deleteIncomeMutation.mutate,
+    refreshData: refetchIncomes
   };
 };

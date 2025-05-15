@@ -1,37 +1,35 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { useToast } from "@/hooks/use-toast";
+import { IncomeCategory, IncomeItem } from '@/services/incomeService';
+import { getAllFamilyMembers, FamilyMember } from '@/services/familyService';
 
-import { 
-  getAllIncomes, 
-  getIncomeCategories, 
-  addIncome, 
-  updateIncome, 
-  deleteIncome,
-  IncomeItem,
-  IncomeCategory 
-} from '@/services/incomeService';
-
-import { 
-  getAllFamilyMembers,
-  FamilyMember 
-} from '@/services/familyService';
-
-// Import our new components
+// Import components
 import IncomeSummary from '@/components/income/IncomeSummary';
 import IncomeList from '@/components/income/IncomeList';
 import IncomeForm from '@/components/income/IncomeForm';
 import FamilyFilter from '@/components/income/FamilyFilter';
 
+// Import custom hooks
+import { useIncomeApi } from '@/hooks/useIncomeApi';
+import { useFamilyApi } from '@/hooks/useFamilyApi';
+
 const IncomePage = () => {
-  const { toast } = useToast();
-  const [incomes, setIncomes] = useState<IncomeItem[]>([]);
-  const [categories, setCategories] = useState<IncomeCategory[]>([]);
-  const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
   const [selectedFamilyMember, setSelectedFamilyMember] = useState<string>("all-members");
-  const [isLoading, setIsLoading] = useState(true);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  
+  // Use our custom hooks
+  const { familyMembers } = useFamilyApi();
+  const { 
+    incomes, 
+    categories, 
+    isLoading, 
+    addIncome: addIncomeItem,
+    updateIncome: updateIncomeItem, 
+    deleteIncome: deleteIncomeItem 
+  } = useIncomeApi(selectedFamilyMember !== 'all-members' ? selectedFamilyMember : undefined);
   
   // New income form data state
   const [newIncome, setNewIncome] = useState<{ 
@@ -48,45 +46,18 @@ const IncomePage = () => {
     family_member_id: '' 
   });
   
-  // State for editing income - ensure family_member_id is always defined 
+  // State for editing income
   const [editingIncome, setEditingIncome] = useState<(IncomeItem & { category_id: number, family_member_id: string }) | null>(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  useEffect(() => {
-    const loadData = async () => {
-      setIsLoading(true);
-      try {
-        // Load income categories
-        const categoriesData = await getIncomeCategories();
-        setCategories(categoriesData);
-        
-        // Load family members
-        const familyData = await getAllFamilyMembers();
-        setFamilyMembers(familyData);
-        
-        // Set default family member if available
-        const defaultMember = familyData.find(member => member.is_default);
-        if (defaultMember) {
-          setNewIncome(prev => ({ ...prev, family_member_id: defaultMember.id }));
-        }
-        
-        // Load income data
-        const incomesData = await getAllIncomes(selectedFamilyMember);
-        setIncomes(incomesData);
-      } catch (error) {
-        console.error('Error loading data:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load income data. Using demo data instead.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
+  // Set default family member when family members data is loaded
+  React.useEffect(() => {
+    if (familyMembers.length > 0) {
+      const defaultMember = familyMembers.find(member => member.is_default);
+      if (defaultMember) {
+        setNewIncome(prev => ({ ...prev, family_member_id: defaultMember.id }));
       }
-    };
-    
-    loadData();
-  }, [toast, selectedFamilyMember]);
+    }
+  }, [familyMembers]);
 
   // Create a map of category names to IDs for easier lookup
   const categoryIdMap: Record<string, number> = {};
@@ -96,124 +67,40 @@ const IncomePage = () => {
 
   const handleAddIncome = async () => {
     if (newIncome.amount <= 0 || !newIncome.category_id) {
-      toast({
-        title: "Validation Error",
-        description: "Please enter a valid amount and select a category.",
-        variant: "destructive",
-      });
+      // We can use toast here directly as it's already handled in the hook
       return;
     }
     
-    try {
-      const result = await addIncome(newIncome);
-      
-      if (result.success) {
-        // Refresh the incomes list
-        const updatedIncomes = await getAllIncomes(selectedFamilyMember);
-        setIncomes(updatedIncomes);
-        
-        toast({
-          title: "Success",
-          description: result.message || "Income added successfully",
-        });
-        
-        // Reset form
-        setNewIncome({ 
-          amount: 0, 
-          category_id: 0, 
-          description: '', 
-          date: new Date().toISOString().split('T')[0],
-          family_member_id: newIncome.family_member_id // Keep the currently selected family member
-        });
-        setIsDialogOpen(false);
-      } else {
-        toast({
-          title: "Error",
-          description: result.message || "Failed to add income",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error('Error adding income:', error);
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred while adding income",
-        variant: "destructive",
-      });
-    }
+    addIncomeItem(newIncome);
+    
+    // Reset form
+    setNewIncome({ 
+      amount: 0, 
+      category_id: 0, 
+      description: '', 
+      date: new Date().toISOString().split('T')[0],
+      family_member_id: newIncome.family_member_id // Keep the currently selected family member
+    });
+    setIsDialogOpen(false);
   };
 
   const handleEditIncome = async () => {
     if (!editingIncome || editingIncome.amount <= 0 || !editingIncome.category_id) {
-      toast({
-        title: "Validation Error",
-        description: "Please enter a valid amount and select a category.",
-        variant: "destructive",
-      });
       return;
     }
     
-    try {
-      const { id, amount, category_id, description, date, family_member_id } = editingIncome;
-      const result = await updateIncome(id, { amount, category_id, description, date, family_member_id });
-      
-      if (result.success) {
-        // Refresh the incomes list
-        const updatedIncomes = await getAllIncomes(selectedFamilyMember);
-        setIncomes(updatedIncomes);
-        
-        toast({
-          title: "Success",
-          description: result.message,
-        });
-        
-        setEditingIncome(null);
-        setIsDialogOpen(false);
-      } else {
-        toast({
-          title: "Error",
-          description: result.message,
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error('Error updating income:', error);
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred while updating income",
-        variant: "destructive",
-      });
-    }
+    const { id, amount, category_id, description, date, family_member_id } = editingIncome;
+    updateIncomeItem({ 
+      id, 
+      incomeData: { amount, category_id, description, date, family_member_id } 
+    });
+    
+    setEditingIncome(null);
+    setIsDialogOpen(false);
   };
 
   const handleDeleteIncome = async (id: string) => {
-    try {
-      const result = await deleteIncome(id);
-      
-      if (result.success) {
-        // Update the incomes list
-        const updatedIncomes = await getAllIncomes(selectedFamilyMember);
-        setIncomes(updatedIncomes);
-        
-        toast({
-          title: "Success",
-          description: result.message,
-        });
-      } else {
-        toast({
-          title: "Error",
-          description: result.message,
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error('Error deleting income:', error);
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred while deleting income",
-        variant: "destructive",
-      });
-    }
+    deleteIncomeItem(id);
   };
 
   // Calculate total and average income
@@ -248,7 +135,6 @@ const IncomePage = () => {
     setEditingIncome({
       ...income,
       category_id: categoryId,
-      // Ensure family_member_id is always defined, default to empty string if not available
       family_member_id: income.family_member_id || ''
     });
     setIsDialogOpen(true);
