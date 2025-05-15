@@ -6,6 +6,10 @@ import { ParamsDictionary } from 'express-serve-static-core';
 import { ParsedQs } from 'qs';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const port = 3001;
@@ -752,6 +756,24 @@ app.get('/api/reports/weekly', async (req: Request, res: Response) => {
     console.error('Error fetching weekly spending patterns:', error);
     res.status(500).json({ status: 'error', message: 'Failed to fetch weekly spending patterns' });
   }
+});
+
+// API Documentation endpoint
+app.get('/', (req: Request, res: Response) => {
+  res.json({ 
+    status: 'success', 
+    message: 'Welcome to FinTrack API',
+    endpoints: {
+      docs: '/api/docs',
+      test: '/api/test',
+      income: '/api/income',
+      incomeCategories: '/api/income/categories',
+      expenses: '/api/expenses',
+      families: '/api/families',
+      familyMembers: '/api/family/members',
+      reports: ['/api/reports/monthly', '/api/reports/weekly']
+    }
+  });
 });
 
 // Apply error handling middleware
