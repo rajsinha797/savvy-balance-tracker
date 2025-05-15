@@ -12,9 +12,9 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const port = 3001;
 
-// Enhanced CORS configuration
+// Enhanced CORS configuration with additional origin
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000'], // Add your frontend URLs
+  origin: ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:8080'], // Added localhost:8080
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
