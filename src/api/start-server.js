@@ -1,18 +1,14 @@
 
 // This file is used to start the API server
-import { register } from 'ts-node';
 import { fileURLToPath } from 'url';
-import path from 'path';
 import { dirname } from 'path';
-
-// Register ts-node to handle TypeScript files
-register();
+import path from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // Import the server
-import('./server.ts')
+import('./server.js')
   .then(() => {
     console.log('Starting FinTrack API Server...');
     console.log('Press Ctrl+C to stop the server');

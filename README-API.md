@@ -11,7 +11,7 @@
 
 1. Make sure your MySQL server is running and the `fintrack` database is created.
 
-2. Configure the database connection in `src/api/server.ts` (if your MySQL configuration differs from the defaults):
+2. Configure the database connection in `src/api/server.js` (if your MySQL configuration differs from the defaults):
    ```javascript
    const pool = mysql.createPool({
      host: 'localhost',
@@ -44,9 +44,32 @@ Starting FinTrack API Server...
 Press Ctrl+C to stop the server
 ```
 
+## Troubleshooting
+
+### Common Issues
+
+#### Database Connection Problems
+- Verify MySQL is running (`mysql --version`)
+- Check database credentials in server.js
+- Confirm the database exists (`mysql -u root -e "SHOW DATABASES;"`)
+- Test the connection: `curl http://localhost:3001/api/test`
+
+#### CORS Issues
+If you're experiencing CORS issues, check the CORS configuration in `src/api/server.js`:
+
+```javascript
+app.use(cors({
+  origin: ['http://localhost:5173', 'http://localhost:3000'], // Add your frontend URLs
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+```
+
+Add additional origins if your frontend is running on a different port.
+
 ## API Endpoints
 
-- **Base URL**: `http://localhost:3001`
+### Base URL: `http://localhost:3001`
 
 ### Test Connection
 - `GET /api/test` - Test database connection
@@ -83,39 +106,6 @@ Press Ctrl+C to stop the server
 - `GET /api/reports/monthly` - Get monthly income/expense summaries
 - `GET /api/reports/weekly` - Get weekly spending patterns
 
-## Troubleshooting
-
-### CORS Issues
-
-If you're experiencing CORS issues, check the CORS configuration in `src/api/server.ts`:
-
-```javascript
-app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000'], // Add your frontend URLs
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
-```
-
-Add additional origins if your frontend is running on a different port.
-
-### ESM/CommonJS Issues
-
-This project uses ES modules. If you see errors related to ESM/CommonJS compatibility:
-
-1. Make sure your Node.js version is up-to-date
-2. Check that the `type` field in your package.json is set correctly 
-3. Use the `.mjs` extension for ES modules or `.cjs` for CommonJS modules when needed
-
-### Database Connectivity
-
-If you have trouble connecting to the database:
-
-1. Verify MySQL is running: `mysql --version`
-2. Check your credentials in the server.ts file
-3. Make sure the fintrack database exists: `mysql -u root -e "SHOW DATABASES;"`
-4. Test the connection: `curl http://localhost:3001/api/test`
-
 ## Database Schema
 
 The schema includes tables for:
@@ -128,3 +118,29 @@ The schema includes tables for:
 - `family_members` - Family member details
 
 For the complete schema, see `src/api/setup-database.sql`
+
+## Testing the API
+
+You can test the API endpoints using cURL or Postman. Here are some examples:
+
+### Test Connection
+```bash
+curl http://localhost:3001/api/test
+```
+
+### Get All Families
+```bash
+curl http://localhost:3001/api/families
+```
+
+### Add a Family
+```bash
+curl -X POST http://localhost:3001/api/families \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Smith Family"}'
+```
+
+### Get Family Members
+```bash
+curl http://localhost:3001/api/family/members
+```
