@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -27,10 +26,10 @@ const ExpensesPage = () => {
     family_member_id: ''
   });
   
-  // Get family members
+  // Fix the useQuery implementation to correctly handle the getAllFamilyMembers function
   const { data: familyMembers = [] } = useQuery({
     queryKey: ['familyMembers'],
-    queryFn: getAllFamilyMembers
+    queryFn: () => getAllFamilyMembers() // Use an arrow function that doesn't pass any parameters
   });
   
   // Get expenses with the API hook

@@ -1,4 +1,3 @@
-
 import axios from 'axios';
 
 const API_URL = 'http://localhost:3001';
@@ -109,7 +108,7 @@ export const deleteFamily = async (id: number): Promise<ApiResponse> => {
   }
 };
 
-// Get all family members
+// Get all family members - Ensuring it works with no parameters
 export const getAllFamilyMembers = async (familyId?: number): Promise<FamilyMember[]> => {
   try {
     const url = familyId 
