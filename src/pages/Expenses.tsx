@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,34 +7,19 @@ import { Label } from '@/components/ui/label';
 import { Plus, Edit, Trash2, Check, Filter } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useToast } from "@/hooks/use-toast";
-import axios from 'axios';
 
-import { 
-  getAllFamilyMembers,
-  FamilyMember 
-} from '@/services/familyService';
-
-interface Expense {
-  id: string;
-  amount: number;
-  category: string;
-  description: string;
-  date: string;
-  family_member?: string;
-  family_member_id?: string;
-}
-
-const API_URL = 'http://localhost:3001';
+import ExpenseSummary from '@/components/expenses/ExpenseSummary';
+import { useExpenseApi } from '@/hooks/useExpenseApi';
+import { useQuery } from '@tanstack/react-query';
+import { getAllFamilyMembers, FamilyMember } from '@/services/familyService';
+import { ExpenseItem } from '@/services/expenseService';
 
 const ExpensesPage = () => {
-  const { toast } = useToast();
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
   const [selectedFamilyMember, setSelectedFamilyMember] = useState<string>("");
-  const [isLoading, setIsLoading] = useState(true);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<ExpenseItem | null>(null);
   
-  const [newExpense, setNewExpense] = useState<Omit<Expense, 'id'>>({ 
+  const [newExpense, setNewExpense] = useState<Omit<ExpenseItem, 'id'>>({ 
     amount: 0, 
     category: '', 
     description: '', 
@@ -42,160 +27,83 @@ const ExpensesPage = () => {
     family_member_id: ''
   });
   
-  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  // Get family members
+  const { data: familyMembers = [] } = useQuery({
+    queryKey: ['familyMembers'],
+    queryFn: getAllFamilyMembers
+  });
+  
+  // Get expenses with the API hook
+  const { 
+    expenses, 
+    categories,
+    isLoadingExpenses,
+    createExpense: addExpense,
+    updateExpense: updateExpenseItem,
+    deleteExpense: deleteExpenseItem
+  } = useExpenseApi(selectedFamilyMember === "all-members" ? undefined : selectedFamilyMember);
 
-  useEffect(() => {
-    loadData();
-  }, [selectedFamilyMember]);
-
-  const loadData = async () => {
-    setIsLoading(true);
-    try {
-      // Load family members
-      const familyData = await getAllFamilyMembers();
-      setFamilyMembers(familyData);
-      
-      // Set default family member if available
-      const defaultMember = familyData.find(member => member.is_default);
-      if (defaultMember && !newExpense.family_member_id) {
-        setNewExpense(prev => ({ ...prev, family_member_id: defaultMember.id }));
-      }
-      
-      // Load expenses data
-      const url = selectedFamilyMember 
-        ? `${API_URL}/api/expenses?family_member_id=${selectedFamilyMember}`
-        : `${API_URL}/api/expenses`;
-      
-      const response = await axios.get(url);
-      setExpenses(response.data);
-    } catch (error) {
-      console.error('Error loading data:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load expenses data. Using demo data instead.",
-        variant: "destructive",
-      });
-      // Use demo data as fallback
-      setExpenses([
-        { id: '1', amount: 1200, category: 'Housing', description: 'Monthly rent', date: '2025-05-01' },
-        { id: '2', amount: 85, category: 'Utilities', description: 'Electricity bill', date: '2025-05-03' },
-        { id: '3', amount: 150, category: 'Groceries', description: 'Weekly grocery shopping', date: '2025-05-05' },
-      ]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleAddExpense = async () => {
-    if (newExpense.amount <= 0 || !newExpense.category) {
-      toast({
-        title: "Validation Error",
-        description: "Please enter a valid amount and select a category.",
-        variant: "destructive",
-      });
-      return;
-    }
+  // Calculate totals
+  const totalExpense = expenses && expenses.length > 0
+    ? expenses.reduce((sum, item) => {
+        const amount = typeof item.amount === 'number' ? item.amount :
+                      (typeof item.amount === 'string' ? parseFloat(item.amount) : 0);
+        return sum + amount;
+      }, 0)
+    : 0;
     
-    try {
-      const response = await axios.post(`${API_URL}/api/expenses`, newExpense);
-      
-      if (response.data.status === 'success') {
-        await loadData();
-        
-        toast({
-          title: "Success",
-          description: "Expense added successfully",
-        });
-        
-        // Reset form but keep family member
-        setNewExpense({ 
-          amount: 0, 
-          category: '', 
-          description: '', 
-          date: new Date().toISOString().split('T')[0],
-          family_member_id: newExpense.family_member_id
-        });
-        setIsDialogOpen(false);
-      }
-    } catch (error) {
-      console.error('Error adding expense:', error);
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred while adding expense",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleEditExpense = async () => {
-    if (!editingExpense || editingExpense.amount <= 0 || !editingExpense.category) {
-      toast({
-        title: "Validation Error",
-        description: "Please enter a valid amount and select a category.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    try {
-      await axios.put(`${API_URL}/api/expenses/${editingExpense.id}`, editingExpense);
-      
-      await loadData();
-      
-      toast({
-        title: "Success",
-        description: "Expense updated successfully",
-      });
-      
-      setEditingExpense(null);
-      setIsDialogOpen(false);
-    } catch (error) {
-      console.error('Error updating expense:', error);
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred while updating expense",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleDeleteExpense = async (id: string) => {
-    try {
-      await axios.delete(`${API_URL}/api/expenses/${id}`);
-      
-      await loadData();
-      
-      toast({
-        title: "Success",
-        description: "Expense deleted successfully",
-      });
-    } catch (error) {
-      console.error('Error deleting expense:', error);
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred while deleting expense",
-        variant: "destructive",
-      });
-    }
-  };
+  const averageExpense = expenses && expenses.length > 0
+    ? totalExpense / expenses.length
+    : 0;
 
   const handleFamilyMemberChange = (value: string) => {
-    setSelectedFamilyMember(value);
+    setSelectedFamilyMember(value === "all-members" ? "" : value);
+  };
+
+  // Handle form submits
+  const handleAddExpense = () => {
+    if (newExpense.amount <= 0 || !newExpense.category) {
+      return;
+    }
+    addExpense(newExpense);
+    setNewExpense({ 
+      amount: 0, 
+      category: '', 
+      description: '', 
+      date: new Date().toISOString().split('T')[0],
+      family_member_id: newExpense.family_member_id
+    });
+    setIsDialogOpen(false);
+  };
+
+  const handleEditExpense = () => {
+    if (!editingExpense || editingExpense.amount <= 0 || !editingExpense.category) {
+      return;
+    }
+    
+    updateExpenseItem({
+      id: editingExpense.id,
+      expense: editingExpense
+    });
+    
+    setEditingExpense(null);
+    setIsDialogOpen(false);
+  };
+
+  const handleDeleteExpense = (id: string) => {
+    deleteExpenseItem(id);
   };
 
   // Find family member name by ID
   const getFamilyMemberName = (id?: string) => {
-    if (!id) return "All Members";
+    if (!id) return null;
     const member = familyMembers.find(m => m.id === id);
-    return member ? member.name : "Unknown";
+    return member ? member.name : null;
   };
 
-  // Calculate total and average expense
-  const totalExpense = expenses.reduce((sum, item) => sum + item.amount, 0);
-  const averageExpense = expenses.length > 0 
-    ? totalExpense / expenses.length
-    : 0;
+  const selectedFamilyMemberName = selectedFamilyMember
+    ? getFamilyMemberName(selectedFamilyMember)
+    : null;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -204,7 +112,7 @@ const ExpensesPage = () => {
         
         <div className="flex gap-2">
           <Select 
-            value={selectedFamilyMember} 
+            value={selectedFamilyMember || "all-members"} 
             onValueChange={handleFamilyMemberChange}
           >
             <SelectTrigger className="w-[180px] bg-fintrack-bg-dark border-fintrack-bg-dark">
@@ -347,33 +255,12 @@ const ExpensesPage = () => {
       </div>
       
       {/* Expense Summary - Top section */}
-      <Card className="card-gradient border-none">
-        <CardHeader>
-          <CardTitle className="text-xl font-semibold">
-            Expense Summary {selectedFamilyMember && `- ${getFamilyMemberName(selectedFamilyMember)}`}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            <div className="bg-fintrack-bg-dark p-4 rounded-xl">
-              <div className="text-sm text-fintrack-text-secondary mb-1">Total Expenses</div>
-              <div className="text-xl font-bold text-red-500">
-                ₹{totalExpense.toFixed(2)}
-              </div>
-            </div>
-            <div className="bg-fintrack-bg-dark p-4 rounded-xl">
-              <div className="text-sm text-fintrack-text-secondary mb-1">Average Expense</div>
-              <div className="text-xl font-bold text-fintrack-purple">
-                ₹{averageExpense.toFixed(2)}
-              </div>
-            </div>
-            <div className="bg-fintrack-bg-dark p-4 rounded-xl">
-              <div className="text-sm text-fintrack-text-secondary mb-1">Number of Entries</div>
-              <div className="text-xl font-bold">{expenses.length}</div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <ExpenseSummary 
+        totalExpense={totalExpense}
+        averageExpense={averageExpense}
+        entriesCount={expenses.length}
+        selectedFamilyMemberName={selectedFamilyMemberName}
+      />
       
       {/* Expense Entries - Bottom section */}
       <Card className="card-gradient border-none">
@@ -381,7 +268,7 @@ const ExpensesPage = () => {
           <CardTitle className="text-xl font-semibold">Expense Entries</CardTitle>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
+          {isLoadingExpenses ? (
             <div className="flex justify-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-fintrack-purple"></div>
             </div>
@@ -408,18 +295,33 @@ const ExpensesPage = () => {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-sm whitespace-nowrap">
-                        {expense.family_member || "Not assigned"}
+                        {expense.family_member || getFamilyMemberName(expense.family_member_id) || "Not assigned"}
                       </td>
                       <td className="px-4 py-3 text-sm">{expense.description}</td>
                       <td className="px-4 py-3 text-sm font-medium text-red-500 text-right">
-                        ₹{expense.amount.toFixed(2)}
+                        ₹{typeof expense.amount === 'number' ? parseFloat(String(expense.amount)).toFixed(2) : '0.00'}
                       </td>
                       <td className="px-4 py-3 text-right whitespace-nowrap">
                         <Button
                           size="icon"
                           variant="ghost"
                           onClick={() => {
-                            setEditingExpense(expense);
+                            // Ensure date is in correct format for editing
+                            let formattedDate = expense.date;
+                            if (expense.date && expense.date.includes('/')) {
+                              const parts = expense.date.split('/');
+                              if (parts.length === 3) {
+                                const day = parts[0].padStart(2, '0');
+                                const month = parts[1].padStart(2, '0');
+                                const year = parts[2];
+                                formattedDate = `${year}-${month}-${day}`;
+                              }
+                            }
+                            
+                            setEditingExpense({
+                              ...expense,
+                              date: formattedDate
+                            });
                             setIsDialogOpen(true);
                           }}
                           className="h-8 w-8 text-fintrack-text-secondary"
