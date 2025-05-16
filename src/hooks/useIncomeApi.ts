@@ -24,13 +24,15 @@ export const useIncomeApi = (familyMemberId?: string) => {
   } = useQuery({
     queryKey: ['incomes', familyMemberId],
     queryFn: () => getAllIncomes(familyMemberId),
-    onError: (error) => {
-      console.error('Error fetching incomes:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load income data. Using demo data instead.",
-        variant: "destructive",
-      });
+    meta: {
+      onError: (error: Error) => {
+        console.error('Error fetching incomes:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load income data. Using demo data instead.",
+          variant: "destructive",
+        });
+      }
     }
   });
 
@@ -42,13 +44,15 @@ export const useIncomeApi = (familyMemberId?: string) => {
   } = useQuery({
     queryKey: ['incomeCategories'],
     queryFn: getIncomeCategories,
-    onError: (error) => {
-      console.error('Error fetching income categories:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load income categories. Using demo categories instead.",
-        variant: "destructive",
-      });
+    meta: {
+      onError: (error: Error) => {
+        console.error('Error fetching income categories:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load income categories. Using demo categories instead.",
+          variant: "destructive",
+        });
+      }
     }
   });
 
