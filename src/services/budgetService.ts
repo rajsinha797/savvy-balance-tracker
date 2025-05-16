@@ -23,7 +23,8 @@ export interface BudgetPeriod {
 
 export const getAllBudgetPeriods = async (): Promise<BudgetPeriod[]> => {
   try {
-    const response = await axios.get(`${API_URL}/api/budget-periods`);
+    // Updated endpoint to match backend convention
+    const response = await axios.get(`${API_URL}/api/budgets`);
     return response.data;
   } catch (error) {
     console.error('Error fetching budget periods:', error);
@@ -33,7 +34,8 @@ export const getAllBudgetPeriods = async (): Promise<BudgetPeriod[]> => {
 
 export const getBudgetPeriod = async (id: string): Promise<BudgetPeriod> => {
   try {
-    const response = await axios.get(`${API_URL}/api/budget-periods/${id}`);
+    // Updated endpoint to match backend convention
+    const response = await axios.get(`${API_URL}/api/budgets/${id}`);
     return response.data;
   } catch (error) {
     console.error('Error fetching budget period:', error);
@@ -43,7 +45,8 @@ export const getBudgetPeriod = async (id: string): Promise<BudgetPeriod> => {
 
 export const createBudgetPeriod = async (budgetPeriod: Omit<BudgetPeriod, 'id'>): Promise<BudgetPeriod> => {
   try {
-    const response = await axios.post(`${API_URL}/api/budget-periods`, budgetPeriod);
+    // Updated endpoint to match backend convention
+    const response = await axios.post(`${API_URL}/api/budgets`, budgetPeriod);
     return response.data;
   } catch (error) {
     console.error('Error creating budget period:', error);
@@ -53,7 +56,8 @@ export const createBudgetPeriod = async (budgetPeriod: Omit<BudgetPeriod, 'id'>)
 
 export const updateBudgetPeriod = async (id: string, budgetPeriod: Partial<BudgetPeriod>): Promise<BudgetPeriod> => {
   try {
-    const response = await axios.put(`${API_URL}/api/budget-periods/${id}`, budgetPeriod);
+    // Updated endpoint to match backend convention
+    const response = await axios.put(`${API_URL}/api/budgets/${id}`, budgetPeriod);
     return response.data;
   } catch (error) {
     console.error('Error updating budget period:', error);
@@ -63,7 +67,8 @@ export const updateBudgetPeriod = async (id: string, budgetPeriod: Partial<Budge
 
 export const deleteBudgetPeriod = async (id: string): Promise<void> => {
   try {
-    await axios.delete(`${API_URL}/api/budget-periods/${id}`);
+    // Updated endpoint to match backend convention
+    await axios.delete(`${API_URL}/api/budgets/${id}`);
   } catch (error) {
     console.error('Error deleting budget period:', error);
     throw error;
@@ -75,7 +80,8 @@ export const addBudgetCategory = async (
   category: Omit<BudgetCategory, 'id' | 'spent' | 'remaining' | 'percentageUsed'>
 ): Promise<BudgetCategory> => {
   try {
-    const response = await axios.post(`${API_URL}/api/budget-periods/${budgetPeriodId}/categories`, category);
+    // Updated endpoint to match backend convention
+    const response = await axios.post(`${API_URL}/api/budgets/${budgetPeriodId}/categories`, category);
     return response.data;
   } catch (error) {
     console.error('Error adding budget category:', error);
@@ -89,8 +95,9 @@ export const updateBudgetCategory = async (
   categoryData: Partial<BudgetCategory>
 ): Promise<BudgetCategory> => {
   try {
+    // Updated endpoint to match backend convention
     const response = await axios.put(
-      `${API_URL}/api/budget-periods/${budgetPeriodId}/categories/${categoryId}`, 
+      `${API_URL}/api/budgets/${budgetPeriodId}/categories/${categoryId}`, 
       categoryData
     );
     return response.data;
@@ -102,7 +109,8 @@ export const updateBudgetCategory = async (
 
 export const deleteBudgetCategory = async (budgetPeriodId: string, categoryId: string): Promise<void> => {
   try {
-    await axios.delete(`${API_URL}/api/budget-periods/${budgetPeriodId}/categories/${categoryId}`);
+    // Updated endpoint to match backend convention
+    await axios.delete(`${API_URL}/api/budgets/${budgetPeriodId}/categories/${categoryId}`);
   } catch (error) {
     console.error('Error deleting budget category:', error);
     throw error;

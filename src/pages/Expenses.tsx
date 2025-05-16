@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,7 +12,7 @@ import ExpenseSummary from '@/components/expenses/ExpenseSummary';
 import { useExpenseApi } from '@/hooks/useExpenseApi';
 import { useQuery } from '@tanstack/react-query';
 import { getAllFamilyMembers, FamilyMember } from '@/services/familyService';
-import { ExpenseItem } from '@/services/expenseService';
+import { ExpenseItem, formatDateForDisplay } from '@/services/expenseService';
 
 const ExpensesPage = () => {
   const [selectedFamilyMember, setSelectedFamilyMember] = useState<string>("");
@@ -298,29 +299,21 @@ const ExpensesPage = () => {
                       </td>
                       <td className="px-4 py-3 text-sm">{expense.description}</td>
                       <td className="px-4 py-3 text-sm font-medium text-red-500 text-right">
-                        ₹{typeof expense.amount === 'number' ? parseFloat(String(expense.amount)).toFixed(2) : '0.00'}
+                        ₹{parseFloat(expense.amount.toString()).toFixed(2)}
                       </td>
                       <td className="px-4 py-3 text-right whitespace-nowrap">
                         <Button
                           size="icon"
                           variant="ghost"
                           onClick={() => {
-                            // Ensure date is in correct format for editing
-                            let formattedDate = expense.date;
-                            if (expense.date && expense.date.includes('/')) {
-                              const parts = expense.date.split('/');
-                              if (parts.length === 3) {
-                                const day = parts[0].padStart(2, '0');
-                                const month = parts[1].padStart(2, '0');
-                                const year = parts[2];
-                                formattedDate = `${year}-${month}-${day}`;
-                              }
-                            }
-                            
-                            setEditingExpense({
+                            // Format date for the form
+                            const formattedExpense = {
                               ...expense,
-                              date: formattedDate
-                            });
+                              // Make sure date is in YYYY-MM-DD format for the input
+                              date: formatDateForDisplay(expense.date)
+                            };
+                            
+                            setEditingExpense(formattedExpense);
                             setIsDialogOpen(true);
                           }}
                           className="h-8 w-8 text-fintrack-text-secondary"
