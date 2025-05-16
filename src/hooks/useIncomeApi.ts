@@ -163,11 +163,11 @@ export const useIncomeApi = (familyMemberId?: string) => {
 
   const isLoading = isIncomesLoading || isCategoriesLoading;
   const isError = isIncomesError || isCategoriesError;
-  const isApiAvailable = incomes.length > 0 || categories.length > 0;
+  const isApiAvailable = Array.isArray(incomes) && incomes.length > 0 || Array.isArray(categories) && categories.length > 0;
 
   return {
-    incomes,
-    categories,
+    incomes: Array.isArray(incomes) ? incomes : [],
+    categories: Array.isArray(categories) ? categories : [],
     isLoading,
     isError,
     isApiAvailable,

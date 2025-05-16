@@ -104,8 +104,12 @@ const IncomePage = () => {
   };
 
   // Calculate total and average income
-  const totalIncome = incomes.reduce((sum, item) => sum + item.amount, 0);
-  const averageIncome = incomes.length > 0 
+  // Ensure we handle the case when incomes might be undefined or contain non-numeric values
+  const totalIncome = incomes && incomes.length > 0 
+    ? incomes.reduce((sum, item) => sum + (typeof item.amount === 'number' ? item.amount : 0), 0)
+    : 0;
+  
+  const averageIncome = incomes && incomes.length > 0 
     ? totalIncome / incomes.length
     : 0;
 

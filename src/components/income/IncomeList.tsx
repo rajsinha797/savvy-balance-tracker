@@ -14,12 +14,15 @@ interface IncomeListProps {
 }
 
 const IncomeList: React.FC<IncomeListProps> = ({
-  incomes,
+  incomes = [], // Provide default empty array
   isLoading,
   onEditIncome,
   onDeleteIncome,
-  categoryIdMap,
+  categoryIdMap = {}, // Provide default empty object
 }) => {
+  // Ensure incomes is an array
+  const safeIncomes = Array.isArray(incomes) ? incomes : [];
+
   return (
     <Card className="card-gradient border-none">
       <CardHeader>
@@ -44,7 +47,7 @@ const IncomeList: React.FC<IncomeListProps> = ({
                 </tr>
               </thead>
               <tbody>
-                {incomes.map((income) => (
+                {safeIncomes.map((income) => (
                   <tr key={income.id} className="border-b border-fintrack-bg-dark">
                     <td className="px-4 py-3 text-sm whitespace-nowrap">{income.date}</td>
                     <td className="px-4 py-3 text-sm whitespace-nowrap">
@@ -57,7 +60,7 @@ const IncomeList: React.FC<IncomeListProps> = ({
                     </td>
                     <td className="px-4 py-3 text-sm">{income.description}</td>
                     <td className="px-4 py-3 text-sm font-medium text-green-500 text-right">
-                      ₹{income.amount.toFixed(2)}
+                      ₹{typeof income.amount === 'number' ? income.amount.toFixed(2) : '0.00'}
                     </td>
                     <td className="px-4 py-3 text-right whitespace-nowrap">
                       <Button
@@ -82,7 +85,7 @@ const IncomeList: React.FC<IncomeListProps> = ({
                     </td>
                   </tr>
                 ))}
-                {incomes.length === 0 && (
+                {safeIncomes.length === 0 && (
                   <tr>
                     <td colSpan={6} className="px-4 py-6 text-center text-fintrack-text-secondary">
                       No income entries found. Add your first income entry.

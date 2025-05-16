@@ -15,6 +15,10 @@ const IncomeSummary: React.FC<IncomeSummaryProps> = ({
   entriesCount,
   selectedFamilyMemberName,
 }) => {
+  // Ensure the values are numbers before calling toFixed
+  const formattedTotal = typeof totalIncome === 'number' ? totalIncome.toFixed(2) : '0.00';
+  const formattedAverage = typeof averageIncome === 'number' ? averageIncome.toFixed(2) : '0.00';
+
   return (
     <Card className="card-gradient border-none">
       <CardHeader>
@@ -27,13 +31,13 @@ const IncomeSummary: React.FC<IncomeSummaryProps> = ({
           <div className="bg-fintrack-bg-dark p-4 rounded-xl">
             <div className="text-sm text-fintrack-text-secondary mb-1">Total Income</div>
             <div className="text-xl font-bold text-green-500">
-              ₹{totalIncome.toFixed(2)}
+              ₹{formattedTotal}
             </div>
           </div>
           <div className="bg-fintrack-bg-dark p-4 rounded-xl">
             <div className="text-sm text-fintrack-text-secondary mb-1">Average Income</div>
             <div className="text-xl font-bold text-fintrack-purple">
-              ₹{averageIncome.toFixed(2)}
+              ₹{formattedAverage}
             </div>
           </div>
           <div className="bg-fintrack-bg-dark p-4 rounded-xl">
