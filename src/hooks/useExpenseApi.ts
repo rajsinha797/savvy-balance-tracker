@@ -1,26 +1,32 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
-import { 
-  getAllExpenses, 
-  getExpenseCategories,
-  createExpense, 
-  updateExpense, 
+import {
+  getAllExpenses,
+  getExpense,
+  createExpense,
+  updateExpense,
   deleteExpense,
-  ExpenseItem,
-  ExpenseCategory
+  Expense,
+  ExpenseFormData
 } from '@/services/expenseService';
+import { 
+  getAllExpenseCategories,
+  ExpenseCategory
+} from '@/services/expenseCategoryService';
 
-export const useExpenseApi = (familyMemberId?: string) => {
+export const useExpenseApi = (familyMemberId?: number) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Get all expenses
   const { 
     data: expenses = [],
     isLoading: isLoadingExpenses,
-    error: expenseError
+    isError: isErrorExpenses,
+    error: expensesError
   } = useQuery({
-    queryKey: ['expenses', familyMemberId],
+    queryKey: familyMemberId ? ['expenses', familyMemberId] : ['expenses'],
     queryFn: () => getAllExpenses(familyMemberId),
     meta: {
       onError: (error: Error) => {
@@ -34,12 +40,15 @@ export const useExpenseApi = (familyMemberId?: string) => {
     }
   });
 
-  const { 
-    data: categories = [],
-    isLoading: isLoadingCategories 
+  // Get expense categories
+  const {
+    data: expenseCategories = [],
+    isLoading: isLoadingCategories,
+    isError: isErrorCategories,
+    error: categoriesError
   } = useQuery({
     queryKey: ['expenseCategories'],
-    queryFn: getExpenseCategories,
+    queryFn: getAllExpenseCategories,
     meta: {
       onError: (error: Error) => {
         console.error('Error fetching expense categories:', error);
@@ -52,8 +61,9 @@ export const useExpenseApi = (familyMemberId?: string) => {
     }
   });
 
+  // Create expense mutation
   const createExpenseMutation = useMutation({
-    mutationFn: createExpense,
+    mutationFn: (data: ExpenseFormData) => createExpense(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
       toast({
@@ -71,9 +81,9 @@ export const useExpenseApi = (familyMemberId?: string) => {
     }
   });
 
+  // Update expense mutation
   const updateExpenseMutation = useMutation({
-    mutationFn: ({ id, expense }: { id: string; expense: Partial<ExpenseItem> }) => 
-      updateExpense(id, expense),
+    mutationFn: ({ id, data }: { id: number; data: ExpenseFormData }) => updateExpense(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
       toast({
@@ -91,8 +101,9 @@ export const useExpenseApi = (familyMemberId?: string) => {
     }
   });
 
+  // Delete expense mutation
   const deleteExpenseMutation = useMutation({
-    mutationFn: deleteExpense,
+    mutationFn: (id: number) => deleteExpense(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
       toast({
@@ -110,21 +121,17 @@ export const useExpenseApi = (familyMemberId?: string) => {
     }
   });
 
-  // Create a map of category IDs to make category lookup easier
-  const categoryMap = categories.reduce<Record<string, ExpenseCategory>>((acc, category) => {
-    acc[category.id.toString()] = category;
-    return acc;
-  }, {});
-
   return {
     expenses,
-    categories,
-    categoryMap,
+    expenseCategories,
     isLoadingExpenses,
     isLoadingCategories,
-    expenseError,
+    isErrorExpenses,
+    isErrorCategories,
+    expensesError,
+    categoriesError,
     createExpense: createExpenseMutation.mutate,
     updateExpense: updateExpenseMutation.mutate,
-    deleteExpense: deleteExpenseMutation.mutate,
+    deleteExpense: deleteExpenseMutation.mutate
   };
 };

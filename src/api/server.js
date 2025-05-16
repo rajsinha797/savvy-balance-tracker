@@ -1,4 +1,3 @@
-
 import express from 'express';
 import cors from 'cors';
 import mysql from 'mysql2/promise';
@@ -332,6 +331,570 @@ app.delete('/api/expenses/:id', async (req, res) => {
   } catch (error) {
     console.error('Error deleting expense:', error);
     res.status(500).json({ status: 'error', message: 'Failed to delete expense' });
+  }
+});
+
+// BUDGET API ENDPOINTS
+
+// Get all budget periods
+app.get('/api/budgets', async (req, res) => {
+  try {
+    // Check if the budgets table exists
+    const [tables] = await pool.query(`
+      SELECT TABLE_NAME 
+      FROM information_schema.TABLES 
+      WHERE TABLE_NAME = 'budgets'
+    `);
+
+    // If the table doesn't exist, create it
+    if (tables.length === 0) {
+      await pool.query(`
+        CREATE TABLE budgets (
+          id VARCHAR(36) PRIMARY KEY,
+          month VARCHAR(2) NOT NULL,
+          year VARCHAR(4) NOT NULL,
+          total_allocated DECIMAL(10,2) DEFAULT 0.00,
+          total_spent DECIMAL(10,2) DEFAULT 0.00,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      
+      await pool.query(`
+        CREATE TABLE budget_categories (
+          id VARCHAR(36) PRIMARY KEY,
+          budget_id VARCHAR(36) NOT NULL,
+          category VARCHAR(50) NOT NULL,
+          allocated DECIMAL(10,2) DEFAULT 0.00,
+          spent DECIMAL(10,2) DEFAULT 0.00,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (budget_id) REFERENCES budgets(id) ON DELETE CASCADE
+        )
+      `);
+    }
+
+    // Query the budgets with their categories
+    const [budgets] = await pool.query(`
+      SELECT 
+        b.id, b.month, b.year, b.total_allocated, b.total_spent
+      FROM 
+        budgets b
+      ORDER BY 
+        b.year DESC, b.month DESC
+    `);
+
+    // For each budget, get the categories
+    const result = [];
+    for (const budget of budgets) {
+      const [categories] = await pool.query(`
+        SELECT 
+          id, category, allocated, spent
+        FROM 
+          budget_categories
+        WHERE 
+          budget_id = ?
+      `, [budget.id]);
+
+      // Calculate remaining and percentage for each category
+      const formattedCategories = categories.map(category => {
+        const remaining = category.allocated - category.spent;
+        const percentageUsed = category.allocated > 0 
+          ? Math.round((category.spent / category.allocated) * 100) 
+          : 0;
+          
+        return {
+          id: category.id,
+          category: category.category,
+          allocated: parseFloat(category.allocated),
+          spent: parseFloat(category.spent),
+          remaining,
+          percentageUsed
+        };
+      });
+
+      result.push({
+        id: budget.id,
+        month: budget.month,
+        year: budget.year,
+        totalAllocated: parseFloat(budget.total_allocated),
+        totalSpent: parseFloat(budget.total_spent),
+        categories: formattedCategories
+      });
+    }
+
+    res.json(result);
+  } catch (error) {
+    console.error('Error fetching budget periods:', error);
+    res.status(500).json({ 
+      status: 'error', 
+      message: 'Failed to fetch budget periods',
+      error: error.message
+    });
+  }
+});
+
+// Get budget period by ID
+app.get('/api/budgets/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Get the budget
+    const [budgets] = await pool.query(`
+      SELECT 
+        id, month, year, total_allocated, total_spent
+      FROM 
+        budgets
+      WHERE 
+        id = ?
+    `, [id]);
+
+    if (budgets.length === 0) {
+      return res.status(404).json({ 
+        status: 'error', 
+        message: 'Budget period not found' 
+      });
+    }
+
+    const budget = budgets[0];
+
+    // Get the categories for this budget
+    const [categories] = await pool.query(`
+      SELECT 
+        id, category, allocated, spent
+      FROM 
+        budget_categories
+      WHERE 
+        budget_id = ?
+    `, [id]);
+
+    // Calculate remaining and percentage for each category
+    const formattedCategories = categories.map(category => {
+      const remaining = category.allocated - category.spent;
+      const percentageUsed = category.allocated > 0 
+        ? Math.round((category.spent / category.allocated) * 100) 
+        : 0;
+        
+      return {
+        id: category.id,
+        category: category.category,
+        allocated: parseFloat(category.allocated),
+        spent: parseFloat(category.spent),
+        remaining,
+        percentageUsed
+      };
+    });
+
+    res.json({
+      id: budget.id,
+      month: budget.month,
+      year: budget.year,
+      totalAllocated: parseFloat(budget.total_allocated),
+      totalSpent: parseFloat(budget.total_spent),
+      categories: formattedCategories
+    });
+  } catch (error) {
+    console.error('Error fetching budget period:', error);
+    res.status(500).json({ 
+      status: 'error', 
+      message: 'Failed to fetch budget period',
+      error: error.message
+    });
+  }
+});
+
+// Create budget period
+app.post('/api/budgets', async (req, res) => {
+  try {
+    const { month, year } = req.body;
+    
+    // Validate required fields
+    if (!month || !year) {
+      return res.status(400).json({ 
+        status: 'error', 
+        message: 'Month and year are required fields' 
+      });
+    }
+
+    // Generate UUID for the budget
+    const [uuidResult] = await pool.query('SELECT UUID() as id');
+    const id = uuidResult[0].id;
+
+    // Insert the new budget
+    await pool.query(`
+      INSERT INTO budgets (id, month, year, total_allocated, total_spent)
+      VALUES (?, ?, ?, 0, 0)
+    `, [id, month, year]);
+
+    // Return the newly created budget
+    res.status(201).json({
+      id,
+      month,
+      year,
+      totalAllocated: 0,
+      totalSpent: 0,
+      categories: []
+    });
+  } catch (error) {
+    console.error('Error creating budget period:', error);
+    res.status(500).json({ 
+      status: 'error', 
+      message: 'Failed to create budget period',
+      error: error.message
+    });
+  }
+});
+
+// Update budget period
+app.put('/api/budgets/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { month, year, totalAllocated, totalSpent } = req.body;
+
+    // Check if the budget exists
+    const [budgetCheck] = await pool.query('SELECT id FROM budgets WHERE id = ?', [id]);
+    if (budgetCheck.length === 0) {
+      return res.status(404).json({ 
+        status: 'error', 
+        message: 'Budget period not found' 
+      });
+    }
+
+    // Build the dynamic SQL query based on provided fields
+    let updateFields = [];
+    let updateValues = [];
+
+    if (month !== undefined) {
+      updateFields.push('month = ?');
+      updateValues.push(month);
+    }
+    if (year !== undefined) {
+      updateFields.push('year = ?');
+      updateValues.push(year);
+    }
+    if (totalAllocated !== undefined) {
+      updateFields.push('total_allocated = ?');
+      updateValues.push(totalAllocated);
+    }
+    if (totalSpent !== undefined) {
+      updateFields.push('total_spent = ?');
+      updateValues.push(totalSpent);
+    }
+
+    if (updateFields.length === 0) {
+      return res.status(400).json({ 
+        status: 'error', 
+        message: 'No fields provided for update' 
+      });
+    }
+
+    // Add id to the values array
+    updateValues.push(id);
+
+    // Execute the update
+    await pool.query(`
+      UPDATE budgets
+      SET ${updateFields.join(', ')}
+      WHERE id = ?
+    `, updateValues);
+
+    // Get the updated budget
+    const [budgets] = await pool.query('SELECT * FROM budgets WHERE id = ?', [id]);
+    const [categories] = await pool.query('SELECT * FROM budget_categories WHERE budget_id = ?', [id]);
+
+    // Calculate remaining and percentage for each category
+    const formattedCategories = categories.map(category => {
+      const remaining = category.allocated - category.spent;
+      const percentageUsed = category.allocated > 0 
+        ? Math.round((category.spent / category.allocated) * 100) 
+        : 0;
+        
+      return {
+        id: category.id,
+        category: category.category,
+        allocated: parseFloat(category.allocated),
+        spent: parseFloat(category.spent),
+        remaining,
+        percentageUsed
+      };
+    });
+
+    const budget = budgets[0];
+    res.json({
+      id: budget.id,
+      month: budget.month,
+      year: budget.year,
+      totalAllocated: parseFloat(budget.total_allocated),
+      totalSpent: parseFloat(budget.total_spent),
+      categories: formattedCategories
+    });
+  } catch (error) {
+    console.error('Error updating budget period:', error);
+    res.status(500).json({ 
+      status: 'error', 
+      message: 'Failed to update budget period',
+      error: error.message
+    });
+  }
+});
+
+// Delete budget period
+app.delete('/api/budgets/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Check if the budget exists
+    const [budgetCheck] = await pool.query('SELECT id FROM budgets WHERE id = ?', [id]);
+    if (budgetCheck.length === 0) {
+      return res.status(404).json({ 
+        status: 'error', 
+        message: 'Budget period not found' 
+      });
+    }
+
+    // Delete the budget (cascade will delete associated categories)
+    await pool.query('DELETE FROM budgets WHERE id = ?', [id]);
+
+    res.json({
+      status: 'success',
+      message: 'Budget period deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting budget period:', error);
+    res.status(500).json({ 
+      status: 'error', 
+      message: 'Failed to delete budget period',
+      error: error.message
+    });
+  }
+});
+
+// Add category to budget
+app.post('/api/budgets/:budgetId/categories', async (req, res) => {
+  try {
+    const { budgetId } = req.params;
+    const { category, allocated } = req.body;
+    
+    // Validate required fields
+    if (!category || allocated === undefined) {
+      return res.status(400).json({ 
+        status: 'error', 
+        message: 'Category name and allocated amount are required' 
+      });
+    }
+
+    // Check if the budget exists
+    const [budgetCheck] = await pool.query('SELECT * FROM budgets WHERE id = ?', [budgetId]);
+    if (budgetCheck.length === 0) {
+      return res.status(404).json({ 
+        status: 'error', 
+        message: 'Budget period not found' 
+      });
+    }
+
+    // Check if this category already exists in this budget
+    const [categoryCheck] = await pool.query(
+      'SELECT id FROM budget_categories WHERE budget_id = ? AND category = ?', 
+      [budgetId, category]
+    );
+    
+    if (categoryCheck.length > 0) {
+      return res.status(400).json({ 
+        status: 'error', 
+        message: 'Category already exists in this budget' 
+      });
+    }
+
+    // Generate UUID for the category
+    const [uuidResult] = await pool.query('SELECT UUID() as id');
+    const id = uuidResult[0].id;
+
+    // Insert the new category
+    await pool.query(`
+      INSERT INTO budget_categories (id, budget_id, category, allocated, spent)
+      VALUES (?, ?, ?, ?, 0)
+    `, [id, budgetId, category, allocated]);
+
+    // Update the total_allocated in the budget
+    await pool.query(`
+      UPDATE budgets 
+      SET total_allocated = total_allocated + ? 
+      WHERE id = ?
+    `, [allocated, budgetId]);
+
+    // Return the newly created category
+    const remaining = allocated;
+    const percentageUsed = 0;
+    
+    res.status(201).json({
+      id,
+      category,
+      allocated: parseFloat(allocated),
+      spent: 0,
+      remaining,
+      percentageUsed
+    });
+  } catch (error) {
+    console.error('Error adding budget category:', error);
+    res.status(500).json({ 
+      status: 'error', 
+      message: 'Failed to add budget category',
+      error: error.message
+    });
+  }
+});
+
+// Update category in budget
+app.put('/api/budgets/:budgetId/categories/:categoryId', async (req, res) => {
+  try {
+    const { budgetId, categoryId } = req.params;
+    const { allocated, spent } = req.body;
+
+    // Check if the budget and category exist
+    const [categoryCheck] = await pool.query(
+      'SELECT * FROM budget_categories WHERE id = ? AND budget_id = ?', 
+      [categoryId, budgetId]
+    );
+    
+    if (categoryCheck.length === 0) {
+      return res.status(404).json({ 
+        status: 'error', 
+        message: 'Budget category not found' 
+      });
+    }
+
+    const oldCategory = categoryCheck[0];
+    const newAllocated = allocated !== undefined ? allocated : oldCategory.allocated;
+    const newSpent = spent !== undefined ? spent : oldCategory.spent;
+
+    // Calculate the difference to update budget totals
+    const allocatedDiff = newAllocated - oldCategory.allocated;
+    const spentDiff = newSpent - oldCategory.spent;
+
+    // Update the category
+    await pool.query(`
+      UPDATE budget_categories
+      SET allocated = ?, spent = ?
+      WHERE id = ?
+    `, [newAllocated, newSpent, categoryId]);
+
+    // Update the budget totals
+    await pool.query(`
+      UPDATE budgets 
+      SET total_allocated = total_allocated + ?,
+          total_spent = total_spent + ?
+      WHERE id = ?
+    `, [allocatedDiff, spentDiff, budgetId]);
+
+    // Calculate the updated values
+    const remaining = newAllocated - newSpent;
+    const percentageUsed = newAllocated > 0 
+      ? Math.round((newSpent / newAllocated) * 100) 
+      : 0;
+
+    // Return the updated category
+    res.json({
+      id: categoryId,
+      category: oldCategory.category,
+      allocated: parseFloat(newAllocated),
+      spent: parseFloat(newSpent),
+      remaining,
+      percentageUsed
+    });
+  } catch (error) {
+    console.error('Error updating budget category:', error);
+    res.status(500).json({ 
+      status: 'error', 
+      message: 'Failed to update budget category',
+      error: error.message
+    });
+  }
+});
+
+// Delete category from budget
+app.delete('/api/budgets/:budgetId/categories/:categoryId', async (req, res) => {
+  try {
+    const { budgetId, categoryId } = req.params;
+
+    // Check if the category exists
+    const [categoryCheck] = await pool.query(
+      'SELECT * FROM budget_categories WHERE id = ? AND budget_id = ?', 
+      [categoryId, budgetId]
+    );
+    
+    if (categoryCheck.length === 0) {
+      return res.status(404).json({ 
+        status: 'error', 
+        message: 'Budget category not found' 
+      });
+    }
+
+    const category = categoryCheck[0];
+
+    // Update the budget totals before deleting the category
+    await pool.query(`
+      UPDATE budgets 
+      SET total_allocated = total_allocated - ?,
+          total_spent = total_spent - ?
+      WHERE id = ?
+    `, [category.allocated, category.spent, budgetId]);
+
+    // Delete the category
+    await pool.query('DELETE FROM budget_categories WHERE id = ?', [categoryId]);
+
+    res.json({
+      status: 'success',
+      message: 'Budget category deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting budget category:', error);
+    res.status(500).json({ 
+      status: 'error', 
+      message: 'Failed to delete budget category',
+      error: error.message
+    });
+  }
+});
+
+// Get expense categories
+app.get('/api/expense-categories', async (req, res) => {
+  try {
+    // Check if the expense_categories table exists
+    const [tables] = await pool.query(`
+      SELECT TABLE_NAME 
+      FROM information_schema.TABLES 
+      WHERE TABLE_NAME = 'expense_categories'
+    `);
+
+    // If the table doesn't exist, create it and add some default categories
+    if (tables.length === 0) {
+      await pool.query(`
+        CREATE TABLE expense_categories (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          name VARCHAR(50) NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      
+      const defaultCategories = [
+        'Housing', 'Utilities', 'Groceries', 'Transportation', 
+        'Entertainment', 'Health', 'Personal Care', 'Education', 
+        'Debt Payments', 'Insurance', 'Savings', 'Investments', 
+        'Charity', 'Other'
+      ];
+      
+      for (const category of defaultCategories) {
+        await pool.query('INSERT INTO expense_categories (name) VALUES (?)', [category]);
+      }
+    }
+
+    const [categories] = await pool.query('SELECT id, name FROM expense_categories ORDER BY name');
+    res.json(categories);
+  } catch (error) {
+    console.error('Error fetching expense categories:', error);
+    res.status(500).json({ 
+      status: 'error', 
+      message: 'Failed to fetch expense categories',
+      error: error.message
+    });
   }
 });
 

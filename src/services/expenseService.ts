@@ -1,36 +1,56 @@
 
 import axios from 'axios';
+import { format, parse } from 'date-fns';
 
 const API_URL = 'http://localhost:3001';
 
-export interface ExpenseCategory {
+export interface Expense {
   id: number;
-  name: string;
-}
-
-export interface ExpenseItem {
-  id: string;
   amount: number;
   category: string;
-  description: string;
   date: string;
+  description: string;
   family_member?: string;
-  family_member_id?: string;
+  family_member_id?: number;
 }
 
-export const getAllExpenses = async (familyMemberId?: string): Promise<ExpenseItem[]> => {
+export interface ExpenseFormData {
+  id?: number;
+  amount: number;
+  category: string;
+  date: string;
+  description: string;
+  family_member_id?: number;
+}
+
+// Helper function to format dates consistently
+const formatDate = (dateString: string): string => {
   try {
-    const url = familyMemberId 
+    // Parse the date from MySQL format (YYYY-MM-DD) and return in expected format
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+      return dateString; // Return as is if invalid
+    }
+    return format(date, 'yyyy-MM-dd');
+  } catch (error) {
+    console.error('Error formatting date:', error);
+    return dateString; // Return as is if there's an error
+  }
+};
+
+export const getAllExpenses = async (familyMemberId?: number): Promise<Expense[]> => {
+  try {
+    const url = familyMemberId
       ? `${API_URL}/api/expenses?family_member_id=${familyMemberId}`
       : `${API_URL}/api/expenses`;
-    
+      
     const response = await axios.get(url);
     
-    // Process each expense to ensure amount is a number and date is in correct format
+    // Format dates consistently
     return response.data.map((expense: any) => ({
       ...expense,
-      amount: parseFloat(expense.amount),
-      date: formatDateForDisplay(expense.date)
+      date: formatDate(expense.date),
+      amount: parseFloat(expense.amount) // Ensure amount is a number
     }));
   } catch (error) {
     console.error('Error fetching expenses:', error);
@@ -38,30 +58,27 @@ export const getAllExpenses = async (familyMemberId?: string): Promise<ExpenseIt
   }
 };
 
-export const getExpenseCategories = async (): Promise<ExpenseCategory[]> => {
+export const getExpense = async (id: number): Promise<Expense> => {
   try {
-    // Updated endpoint to match backend convention
-    const response = await axios.get(`${API_URL}/api/expenses/categories`);
-    return response.data;
+    const response = await axios.get(`${API_URL}/api/expenses/${id}`);
+    return {
+      ...response.data,
+      date: formatDate(response.data.date),
+      amount: parseFloat(response.data.amount) // Ensure amount is a number
+    };
   } catch (error) {
-    console.error('Error fetching expense categories:', error);
+    console.error(`Error fetching expense ${id}:`, error);
     throw error;
   }
 };
 
-export const createExpense = async (expense: Omit<ExpenseItem, 'id'>): Promise<ExpenseItem> => {
+export const createExpense = async (expense: ExpenseFormData): Promise<Expense> => {
   try {
-    // Ensure date is in correct format for API
-    const formattedExpense = {
-      ...expense,
-      date: formatDateForAPI(expense.date)
-    };
-    
-    const response = await axios.post(`${API_URL}/api/expenses`, formattedExpense);
+    const response = await axios.post(`${API_URL}/api/expenses`, expense);
     return {
       ...response.data,
-      amount: parseFloat(response.data.amount),
-      date: formatDateForDisplay(response.data.date)
+      date: formatDate(response.data.date),
+      amount: parseFloat(response.data.amount) // Ensure amount is a number
     };
   } catch (error) {
     console.error('Error creating expense:', error);
@@ -69,90 +86,25 @@ export const createExpense = async (expense: Omit<ExpenseItem, 'id'>): Promise<E
   }
 };
 
-export const updateExpense = async (id: string, expense: Partial<ExpenseItem>): Promise<ExpenseItem> => {
+export const updateExpense = async (id: number, expense: ExpenseFormData): Promise<Expense> => {
   try {
-    // Ensure date is in correct format for API if it exists
-    const formattedExpense = {
-      ...expense
-    };
-    
-    if (formattedExpense.date) {
-      formattedExpense.date = formatDateForAPI(formattedExpense.date);
-    }
-    
-    const response = await axios.put(`${API_URL}/api/expenses/${id}`, formattedExpense);
+    const response = await axios.put(`${API_URL}/api/expenses/${id}`, expense);
     return {
       ...response.data,
-      amount: parseFloat(response.data.amount),
-      date: formatDateForDisplay(response.data.date)
+      date: formatDate(response.data.date),
+      amount: parseFloat(response.data.amount) // Ensure amount is a number
     };
   } catch (error) {
-    console.error('Error updating expense:', error);
+    console.error(`Error updating expense ${id}:`, error);
     throw error;
   }
 };
 
-export const deleteExpense = async (id: string): Promise<void> => {
+export const deleteExpense = async (id: number): Promise<void> => {
   try {
     await axios.delete(`${API_URL}/api/expenses/${id}`);
   } catch (error) {
-    console.error('Error deleting expense:', error);
+    console.error(`Error deleting expense ${id}:`, error);
     throw error;
   }
-};
-
-// Helper function to format date for display (YYYY-MM-DD)
-export const formatDateForDisplay = (dateString: string): string => {
-  if (!dateString) return '';
-  
-  // If date is already in YYYY-MM-DD format, return it
-  if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
-    return dateString;
-  }
-  
-  try {
-    // Handle DD/MM/YYYY format
-    if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateString)) {
-      const [day, month, year] = dateString.split('/');
-      return `${year}-${month}-${day}`;
-    }
-    
-    // Try to parse any other format using Date
-    const date = new Date(dateString);
-    if (!isNaN(date.getTime())) {
-      return date.toISOString().split('T')[0];
-    }
-  } catch (e) {
-    console.error('Error parsing date:', e);
-  }
-  
-  return dateString;
-};
-
-// Helper function to format date for API (YYYY-MM-DD)
-export const formatDateForAPI = (dateString: string): string => {
-  if (!dateString) return '';
-  
-  // If date is already in YYYY-MM-DD format, return it
-  if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
-    return dateString;
-  }
-  
-  try {
-    // Handle DD/MM/YYYY format
-    if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateString)) {
-      const [day, month, year] = dateString.split('/');
-      return `${year}-${month}-${day}`;
-    }
-    
-    // Try to parse any other format using Date
-    const date = new Date(dateString);
-    if (!isNaN(date.getTime())) {
-      return date.toISOString().split('T')[0];
-    }
-  } catch (e) {
-    console.error('Error parsing date:', e);
-  }
-  
-  return dateString;
 };
