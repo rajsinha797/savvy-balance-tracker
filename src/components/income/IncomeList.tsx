@@ -23,6 +23,9 @@ const IncomeList: React.FC<IncomeListProps> = ({
   // Ensure incomes is an array
   const safeIncomes = Array.isArray(incomes) ? incomes : [];
 
+  // Debug the income data to understand what's happening
+  console.log("Income data in IncomeList:", safeIncomes);
+
   return (
     <Card className="card-gradient border-none">
       <CardHeader>
@@ -60,7 +63,7 @@ const IncomeList: React.FC<IncomeListProps> = ({
                     </td>
                     <td className="px-4 py-3 text-sm">{income.description}</td>
                     <td className="px-4 py-3 text-sm font-medium text-green-500 text-right">
-                      ₹{typeof income.amount === 'number' ? income.amount.toFixed(2) : '0.00'}
+                      ₹{typeof income.amount === 'number' ? parseFloat(String(income.amount)).toFixed(2) : '0.00'}
                     </td>
                     <td className="px-4 py-3 text-right whitespace-nowrap">
                       <Button

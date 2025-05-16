@@ -103,10 +103,14 @@ const IncomePage = () => {
     deleteIncomeItem(id);
   };
 
-  // Calculate total and average income
+  // Calculate total and average income with proper parsing
   // Ensure we handle the case when incomes might be undefined or contain non-numeric values
   const totalIncome = incomes && incomes.length > 0 
-    ? incomes.reduce((sum, item) => sum + (typeof item.amount === 'number' ? item.amount : 0), 0)
+    ? incomes.reduce((sum, item) => {
+        const amount = typeof item.amount === 'number' ? item.amount : 
+                      (typeof item.amount === 'string' ? parseFloat(item.amount) : 0);
+        return sum + amount;
+      }, 0)
     : 0;
   
   const averageIncome = incomes && incomes.length > 0 
@@ -136,8 +140,36 @@ const IncomePage = () => {
   };
 
   const startEditIncome = (income: IncomeItem, categoryId: number) => {
+    // Format the date properly for the edit form (ISO format for the date input)
+    let formattedDate = income.date;
+    
+    // Check if date is in format DD/MM/YYYY or other non-ISO format and convert it
+    if (income.date && income.date.includes('/')) {
+      const parts = income.date.split('/');
+      if (parts.length === 3) {
+        // If it's in format DD/MM/YYYY, convert to YYYY-MM-DD
+        const day = parts[0].padStart(2, '0');
+        const month = parts[1].padStart(2, '0');
+        const year = parts[2];
+        formattedDate = `${year}-${month}-${day}`;
+      }
+    } else if (income.date && !income.date.includes('-')) {
+      // Try to parse any other format to ISO
+      try {
+        const dateObj = new Date(income.date);
+        if (!isNaN(dateObj.getTime())) {
+          formattedDate = dateObj.toISOString().split('T')[0];
+        }
+      } catch (e) {
+        console.error("Error parsing date:", e);
+      }
+    }
+
+    console.log("Original date:", income.date, "Formatted date:", formattedDate);
+    
     setEditingIncome({
       ...income,
+      date: formattedDate,
       category_id: categoryId,
       family_member_id: income.family_member_id || ''
     });

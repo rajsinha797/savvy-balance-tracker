@@ -15,9 +15,11 @@ const IncomeSummary: React.FC<IncomeSummaryProps> = ({
   entriesCount,
   selectedFamilyMemberName,
 }) => {
-  // Ensure the values are numbers before calling toFixed
-  const formattedTotal = typeof totalIncome === 'number' ? totalIncome.toFixed(2) : '0.00';
-  const formattedAverage = typeof averageIncome === 'number' ? averageIncome.toFixed(2) : '0.00';
+  console.log("Income summary values:", { totalIncome, averageIncome, entriesCount });
+  
+  // Ensure the values are numbers and parse them properly
+  const formattedTotal = typeof totalIncome === 'number' ? parseFloat(String(totalIncome)).toFixed(2) : '0.00';
+  const formattedAverage = typeof averageIncome === 'number' ? parseFloat(String(averageIncome)).toFixed(2) : '0.00';
 
   return (
     <Card className="card-gradient border-none">
