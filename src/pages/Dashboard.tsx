@@ -130,25 +130,23 @@ const Dashboard = () => {
         ]);
       }
       
-      // Combine income and expenses for transactions list
+      // Combine income and expenses for transactions list - Fix the type issue here
       const combinedTransactions: Transaction[] = [
         ...(Array.isArray(incomeData) ? incomeData.map((item: any) => ({
           id: item.id,
-          type: 'income',
+          type: "income" as const, // Explicitly type as "income"
           amount: parseFloat(item.amount || 0),
           category: item.category,
           description: item.description,
           date: item.date,
-          family_member: item.family_member,
         })) : []),
         ...(Array.isArray(expenseData) ? expenseData.map((item: any) => ({
           id: item.id,
-          type: 'expense',
+          type: "expense" as const, // Explicitly type as "expense"
           amount: parseFloat(item.amount || 0),
           category: item.category,
           description: item.description,
           date: item.date,
-          family_member: item.family_member,
         })) : [])
       ];
       
