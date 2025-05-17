@@ -109,16 +109,31 @@ app.get('/api/income', async (req, res) => {
 app.get('/api/income/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    
+    // Don't use string parameters directly in SQL queries without validation
+    // Make sure it's a valid ID and not a route parameter like "types"
+    if (id === 'types' || id === 'categories' || id === 'subcategories') {
+      res.status(404).json({ status: 'error', message: 'Income not found' });
+      return;
+    }
+    
     const query = `
-      SELECT i.income_id as id, i.amount, i.date, i.description, ic.name as category,
+      SELECT i.income_id as id, i.amount, i.date, i.description,
+             it.name as income_type_name, 
+             ic.name as income_category_name,
+             ist.name as income_sub_category_name,
+             i.income_type_id, i.income_category_id, i.income_sub_category_id,
              i.family_member_id
       FROM income i
-      JOIN income_category ic ON i.category_id = ic.category_id
+      LEFT JOIN income_type it ON i.income_type_id = it.id
+      LEFT JOIN income_category ic ON i.income_category_id = ic.id
+      LEFT JOIN income_sub_category ist ON i.income_sub_category_id = ist.id
       WHERE i.income_id = ?
     `;
+    
     const [rows] = await pool.query(query, [id]);
     
-    if (Array.isArray(rows) && rows.length === 0) {
+    if (!rows || rows.length === 0) {
       res.status(404).json({ status: 'error', message: 'Income not found' });
       return;
     }
@@ -133,21 +148,41 @@ app.get('/api/income/:id', async (req, res) => {
 // Add new income
 app.post('/api/income', async (req, res) => {
   try {
-    const { amount, category_id, date, description, family_member_id } = req.body;
+    const { 
+      amount, 
+      income_type_id,
+      income_category_id,
+      income_sub_category_id,
+      date, 
+      description, 
+      family_member_id 
+    } = req.body;
     
     // Set default values for now
     const family_id = 1; // Default family ID
     const user_id = 1;  // Default user ID
     
     const query = `
-      INSERT INTO income (family_id, user_id, category_id, amount, date, description, family_member_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO income (
+        family_id, 
+        user_id, 
+        income_type_id,
+        income_category_id,
+        income_sub_category_id,
+        amount, 
+        date, 
+        description, 
+        family_member_id
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
     
     const [result] = await pool.query(query, [
       family_id, 
       user_id, 
-      category_id, 
+      income_type_id, 
+      income_category_id,
+      income_sub_category_id,
       amount, 
       date, 
       description,
@@ -171,16 +206,33 @@ app.post('/api/income', async (req, res) => {
 app.put('/api/income/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { amount, category_id, date, description, family_member_id } = req.body;
+    const { 
+      amount, 
+      income_type_id,
+      income_category_id,
+      income_sub_category_id, 
+      date, 
+      description, 
+      family_member_id 
+    } = req.body;
     
     const query = `
       UPDATE income
-      SET category_id = ?, amount = ?, date = ?, description = ?, family_member_id = ?
+      SET 
+        income_type_id = ?,
+        income_category_id = ?,
+        income_sub_category_id = ?,
+        amount = ?, 
+        date = ?, 
+        description = ?, 
+        family_member_id = ?
       WHERE income_id = ?
     `;
     
     const [result] = await pool.query(query, [
-      category_id, 
+      income_type_id, 
+      income_category_id,
+      income_sub_category_id,
       amount, 
       date, 
       description,
@@ -1319,6 +1371,47 @@ app.get('/', (req, res) => {
       reports: ['/api/reports/monthly', '/api/reports/weekly']
     }
   });
+});
+
+// Add API endpoint for income types
+app.get('/api/income/types', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM income_type');
+    res.json(rows);
+  } catch (error) {
+    console.error('Error fetching income types:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to fetch income types' });
+  }
+});
+
+// Add API endpoint for income categories by type
+app.get('/api/income/categories/by-type/:typeId', async (req, res) => {
+  try {
+    const { typeId } = req.params;
+    const [rows] = await pool.query(
+      'SELECT * FROM income_category WHERE income_type_id = ?',
+      [typeId]
+    );
+    res.json(rows);
+  } catch (error) {
+    console.error(`Error fetching income categories for type ${req.params.typeId}:`, error);
+    res.status(500).json({ status: 'error', message: 'Failed to fetch income categories' });
+  }
+});
+
+// Add API endpoint for income subcategories by category
+app.get('/api/income/subcategories/by-category/:categoryId', async (req, res) => {
+  try {
+    const { categoryId } = req.params;
+    const [rows] = await pool.query(
+      'SELECT * FROM income_sub_category WHERE income_category_id = ?',
+      [categoryId]
+    );
+    res.json(rows);
+  } catch (error) {
+    console.error(`Error fetching income subcategories for category ${req.params.categoryId}:`, error);
+    res.status(500).json({ status: 'error', message: 'Failed to fetch income subcategories' });
+  }
 });
 
 // Apply error handling middleware

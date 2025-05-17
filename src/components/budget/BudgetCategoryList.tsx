@@ -39,9 +39,15 @@ const BudgetCategoryList: React.FC<BudgetCategoryListProps> = ({ categories, isL
                     <div>
                       <h3 className="font-medium">{category.category}</h3>
                       <p className="text-sm text-fintrack-text-secondary">
+                        {category.type && <span className="mr-1">({category.type})</span>}
                         ₹{category.spent.toFixed(2)} of ₹{category.allocated.toFixed(2)} 
                         ({category.percentageUsed.toFixed(0)}%)
                       </p>
+                      {category.subCategory && (
+                        <p className="text-xs text-fintrack-text-secondary">
+                          {category.subCategory}
+                        </p>
+                      )}
                     </div>
                     <Button 
                       variant="ghost" 
