@@ -121,6 +121,12 @@ The expense list now displays:
 - Expense Sub-Category
 - Other existing fields (date, amount, family member, description)
 
+### Budget Management
+Budget categories now support the enhanced categorization system:
+- Budget categories can be created based on expense type, category, and subcategory
+- The budget category form includes a hierarchical selection process
+- Budget reports show spending by category with the new hierarchical structure
+
 ## API Changes
 
 New API endpoints:
