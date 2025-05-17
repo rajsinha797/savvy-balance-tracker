@@ -1,3 +1,4 @@
+
 import express from 'express';
 import cors from 'cors';
 import mysql from 'mysql2/promise';
@@ -428,7 +429,7 @@ app.post('/api/budgets/sync-expenses', async (req, res) => {
       [year, month]
     );
 
-    if (!budgets || budgets.length === 0) {
+    if (!isResultArray(budgets) || budgets.length === 0) {
       return res.status(404).json({
         status: 'error',
         message: 'No budget found for this period'
@@ -457,7 +458,7 @@ app.post('/api/budgets/sync-expenses', async (req, res) => {
         [budgetId, expense.category, expense.type || null, expense.sub_category || null]
       );
 
-      if (categories && categories.length > 0) {
+      if (isResultArray(categories) && categories.length > 0) {
         const category = categories[0];
         
         // Update the spent amount
@@ -1229,7 +1230,7 @@ app.get('/api/family/members/:id', async (req, res) => {
     
     const [rows] = await pool.query(query, [id]);
     
-    if (Array.isArray(rows) && rows.length === 0) {
+    if (!isResultArray(rows) || rows.length === 0) {
       res.status(404).json({ status: 'error', message: 'Family member not found' });
       return;
     }
@@ -1559,3 +1560,4 @@ app.listen(port, () => {
 });
 
 export default app;
+
