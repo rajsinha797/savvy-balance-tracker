@@ -1,3 +1,4 @@
+
 import express from 'express';
 import cors from 'cors';
 import mysql from 'mysql2/promise';
@@ -1565,7 +1566,11 @@ app.get('/api/income/categories/by-type/:typeId', async (req, res) => {
       'SELECT * FROM income_category WHERE income_type_id = ?',
       [typeId]
     );
-    res.json(rows);
+    
+    // Check if the result is an array before sending it
+    const result = isResultArray(rows) ? rows : [];
+    
+    res.json(result);
   } catch (error) {
     console.error(`Error fetching income categories for type ${req.params.typeId}:`, error);
     res.status(500).json({ status: 'error', message: 'Failed to fetch income categories' });
@@ -1580,7 +1585,11 @@ app.get('/api/income/subcategories/by-category/:categoryId', async (req, res) =>
       'SELECT * FROM income_sub_category WHERE income_category_id = ?',
       [categoryId]
     );
-    res.json(rows);
+    
+    // Check if the result is an array before sending it
+    const result = isResultArray(rows) ? rows : [];
+    
+    res.json(result);
   } catch (error) {
     console.error(`Error fetching income subcategories for category ${req.params.categoryId}:`, error);
     res.status(500).json({ status: 'error', message: 'Failed to fetch income subcategories' });
