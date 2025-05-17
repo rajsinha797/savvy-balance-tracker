@@ -46,6 +46,14 @@ const isResultArray = (result) => {
   return Array.isArray(result);
 };
 
+// Helper function to safely get UUID from query result
+const getUuidFromResult = (result) => {
+  if (result && Array.isArray(result) && result.length > 0 && result[0] && 'id' in result[0]) {
+    return result[0].id;
+  }
+  return null;
+};
+
 // API Documentation endpoint
 app.get('/api/docs', (req, res) => {
   const docsPath = path.join(__dirname, 'api-docs.md');
@@ -689,17 +697,16 @@ app.post('/api/budgets', async (req, res) => {
     }
 
     // Generate UUID for the budget
-    const [uuidResult] = await pool.query('SELECT UUID() as id');
+    const [uuidRows] = await pool.query('SELECT UUID() as id');
     
-    // Check if uuidResult is valid and has the expected format
-    if (!uuidResult || typeof uuidResult !== 'object' || !('id' in uuidResult[0])) {
+    // Use the helper function to safely get UUID
+    const id = getUuidFromResult(uuidRows);
+    if (!id) {
       return res.status(500).json({
         status: 'error',
         message: 'Failed to generate UUID'
       });
     }
-    
-    const id = uuidResult[0].id;
 
     // Insert the new budget
     await pool.query(`
@@ -898,17 +905,16 @@ app.post('/api/budgets/:budgetId/categories', async (req, res) => {
     }
 
     // Generate UUID for the category
-    const [uuidResult] = await pool.query('SELECT UUID() as id');
+    const [uuidRows] = await pool.query('SELECT UUID() as id');
     
-    // Check if uuidResult is valid and has the expected format
-    if (!uuidResult || typeof uuidResult !== 'object' || !('id' in uuidResult[0])) {
+    // Use the helper function to safely get UUID
+    const id = getUuidFromResult(uuidRows);
+    if (!id) {
       return res.status(500).json({
         status: 'error',
         message: 'Failed to generate UUID'
       });
     }
-    
-    const id = uuidResult[0].id;
 
     // Insert the new category
     await pool.query(`
