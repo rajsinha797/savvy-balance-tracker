@@ -9,7 +9,43 @@ const pool = mysql.createPool({
   database: 'fintrack',
   waitForConnections: true,
   connectionLimit: 10,
-  queueLimit: 0
+  queueLimit: 0,
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 0
 });
+
+// Test the connection
+async function testConnection() {
+  try {
+    const [rows] = await pool.query('SELECT 1 as test');
+    console.log('Database connection established successfully');
+  } catch (error) {
+    console.error('Error connecting to database:', error.message);
+    
+    // Attempt to create the database if it doesn't exist
+    try {
+      // Create a connection without specifying database
+      const tempPool = mysql.createPool({
+        host: 'localhost',
+        user: 'root',
+        password: ''
+      });
+      
+      console.log('Attempting to create the database...');
+      await tempPool.query('CREATE DATABASE IF NOT EXISTS fintrack');
+      console.log('Database created or already exists.');
+      
+      // Close the temporary connection
+      await tempPool.end();
+      
+      console.log('Please run the setup-database.sql script to initialize the schema.');
+    } catch (createError) {
+      console.error('Failed to create database:', createError.message);
+    }
+  }
+}
+
+// Call test connection function (comment out in production)
+testConnection();
 
 export default pool;

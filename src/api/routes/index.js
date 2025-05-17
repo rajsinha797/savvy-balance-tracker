@@ -9,6 +9,7 @@ import budgetRoutes from './budgetRoutes.js';
 import familyRoutes from './familyRoutes.js';
 import familyMemberRoutes from './familyMemberRoutes.js';
 import reportRoutes from './reportRoutes.js';
+import * as expenseCategoryController from '../controllers/expenseCategoryController.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -48,6 +49,9 @@ router.use('/families', familyRoutes);
 router.use('/family/members', familyMemberRoutes);
 router.use('/reports', reportRoutes);
 
+// Direct access to expense categories (legacy support)
+router.get('/expense-categories', expenseCategoryController.getAllExpenseCategories);
+
 // Home route
 router.get('/', (req, res) => {
   res.json({ 
@@ -59,6 +63,7 @@ router.get('/', (req, res) => {
       income: '/api/income',
       incomeCategories: '/api/income/categories',
       expenses: '/api/expenses',
+      expenseCategories: '/api/expense-categories',
       families: '/api/families',
       familyMembers: '/api/family/members',
       reports: ['/api/reports/monthly', '/api/reports/weekly']

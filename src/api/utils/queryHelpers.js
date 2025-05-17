@@ -62,3 +62,32 @@ export const getSafeRows = (result) => {
   // Return empty array as fallback
   return [];
 };
+
+/**
+ * Helper function to safely handle OkPacket results
+ * OkPacket is returned for INSERT, UPDATE, DELETE operations
+ */
+export const handleOkPacket = (result) => {
+  if (!result) return { success: false, affectedRows: 0, insertId: null };
+  
+  // Handle direct OkPacket
+  if (typeof result === 'object' && ('affectedRows' in result || 'insertId' in result)) {
+    return {
+      success: true,
+      affectedRows: result.affectedRows || 0,
+      insertId: result.insertId || null
+    };
+  }
+  
+  // Handle [OkPacket] format
+  if (Array.isArray(result) && result.length > 0 && 
+      typeof result[0] === 'object' && ('affectedRows' in result[0] || 'insertId' in result[0])) {
+    return {
+      success: true,
+      affectedRows: result[0].affectedRows || 0,
+      insertId: result[0].insertId || null
+    };
+  }
+  
+  return { success: false, affectedRows: 0, insertId: null };
+};
