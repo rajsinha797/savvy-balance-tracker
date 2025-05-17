@@ -46,7 +46,7 @@ const isResultArray = (result) => {
   return Array.isArray(result);
 };
 
-// Helper function to safely get UUID from query result
+// Enhanced helper function to safely get UUID from query result
 const getUuidFromResult = (result) => {
   // Handle case when result is an array with objects
   if (result && Array.isArray(result) && result.length > 0 && result[0] && 'id' in result[0]) {
@@ -61,6 +61,20 @@ const getUuidFromResult = (result) => {
   // Handle OkPacket case that might have insertId
   if (result && typeof result === 'object' && 'insertId' in result) {
     return result.insertId.toString();
+  }
+  
+  // For handling SELECT UUID() - in mysql2 the first element might be rows array, second is fields
+  if (result && Array.isArray(result) && result.length >= 1 && Array.isArray(result[0]) && result[0].length > 0 && result[0][0] && 'id' in result[0][0]) {
+    return result[0][0].id;
+  }
+
+  // Another possible format for UUID() results
+  if (result && Array.isArray(result) && result.length >= 1 && Array.isArray(result[0]) && result[0].length > 0) {
+    const firstRow = result[0][0];
+    const firstKey = Object.keys(firstRow)[0];
+    if (firstKey) {
+      return firstRow[firstKey];
+    }
   }
   
   return null;
@@ -709,10 +723,10 @@ app.post('/api/budgets', async (req, res) => {
     }
 
     // Generate UUID for the budget
-    const [uuidRows] = await pool.query('SELECT UUID() as id');
+    const [uuidResult] = await pool.query('SELECT UUID() as id');
     
-    // Use the helper function to safely get UUID
-    const id = getUuidFromResult(uuidRows);
+    // Use the enhanced helper function to safely get UUID
+    const id = getUuidFromResult(uuidResult);
     if (!id) {
       return res.status(500).json({
         status: 'error',
@@ -917,10 +931,10 @@ app.post('/api/budgets/:budgetId/categories', async (req, res) => {
     }
 
     // Generate UUID for the category
-    const [uuidRows] = await pool.query('SELECT UUID() as id');
+    const [uuidResult] = await pool.query('SELECT UUID() as id');
     
     // Use the enhanced helper function to safely get UUID
-    const id = getUuidFromResult(uuidRows);
+    const id = getUuidFromResult(uuidResult);
     if (!id) {
       return res.status(500).json({
         status: 'error',
