@@ -1,4 +1,3 @@
-
 import express from 'express';
 import cors from 'cors';
 import mysql from 'mysql2/promise';
@@ -691,6 +690,16 @@ app.post('/api/budgets', async (req, res) => {
 
     // Generate UUID for the budget
     const [uuidResult] = await pool.query('SELECT UUID() as id');
+    
+    // This is where the error is occurring - line 922
+    // We need to check if uuidResult is an array
+    if (!isResultArray(uuidResult) || uuidResult.length === 0) {
+      return res.status(500).json({
+        status: 'error',
+        message: 'Failed to generate UUID'
+      });
+    }
+    
     const id = uuidResult[0].id;
 
     // Insert the new budget
@@ -891,6 +900,15 @@ app.post('/api/budgets/:budgetId/categories', async (req, res) => {
 
     // Generate UUID for the category
     const [uuidResult] = await pool.query('SELECT UUID() as id');
+    
+    // Check if uuidResult is valid
+    if (!isResultArray(uuidResult) || uuidResult.length === 0) {
+      return res.status(500).json({
+        status: 'error',
+        message: 'Failed to generate UUID'
+      });
+    }
+    
     const id = uuidResult[0].id;
 
     // Insert the new category
