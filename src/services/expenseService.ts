@@ -8,6 +8,12 @@ export interface Expense {
   id: string | number;
   amount: number;
   category: string;
+  expense_type_id?: number;
+  expense_category_id?: number;
+  expense_sub_category_id?: number;
+  expense_type_name?: string;
+  expense_category_name?: string;
+  expense_sub_category_name?: string;
   date: string;
   description: string;
   family_member?: string;
@@ -22,10 +28,30 @@ export interface ExpenseItem extends Expense {
 export interface ExpenseFormData {
   id?: string | number;
   amount: number;
-  category: string;
+  category?: string; // For backward compatibility
+  expense_type_id?: number;
+  expense_category_id?: number;
+  expense_sub_category_id?: number;
   date: string;
   description: string;
   family_member_id?: string;
+}
+
+export interface ExpenseType {
+  id: number;
+  name: string;
+}
+
+export interface ExpenseCategoryWithTypeId {
+  id: number;
+  expense_type_id: number;
+  name: string;
+}
+
+export interface ExpenseSubCategory {
+  id: number;
+  expense_category_id: number;
+  name: string;
 }
 
 // Add the expected response interface
@@ -53,6 +79,37 @@ const formatDate = (dateString: string): string => {
 // Add the formatDateForDisplay function that was missing
 export const formatDateForDisplay = (dateString: string): string => {
   return formatDate(dateString);
+};
+
+// New functions for the enhanced categorization system
+export const getAllExpenseTypes = async (): Promise<ExpenseType[]> => {
+  try {
+    const response = await axios.get(`${API_URL}/api/expenses/types`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching expense types:', error);
+    throw error;
+  }
+};
+
+export const getExpenseCategoriesByTypeId = async (typeId: number): Promise<ExpenseCategoryWithTypeId[]> => {
+  try {
+    const response = await axios.get(`${API_URL}/api/expenses/categories/by-type/${typeId}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching expense categories for type ${typeId}:`, error);
+    throw error;
+  }
+};
+
+export const getExpenseSubCategoriesByCategoryId = async (categoryId: number): Promise<ExpenseSubCategory[]> => {
+  try {
+    const response = await axios.get(`${API_URL}/api/expenses/subcategories/by-category/${categoryId}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching expense subcategories for category ${categoryId}:`, error);
+    throw error;
+  }
 };
 
 export const getAllExpenses = async (familyMemberId?: string | number): Promise<Expense[]> => {

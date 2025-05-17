@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -24,30 +24,42 @@ const IncomePage = () => {
   const { familyMembers } = useFamilyApi();
   const { 
     incomes, 
-    categories, 
+    categories, // Legacy categories
+    incomeTypes, // New income types
+    getIncomeCategoriesByType, // Function to get categories by type ID
+    getIncomeSubCategoriesByCategory, // Function to get subcategories by category ID
     isLoading, 
     addIncome: addIncomeItem,
     updateIncome: updateIncomeItem, 
     deleteIncome: deleteIncomeItem 
   } = useIncomeApi(selectedFamilyMember !== 'all-members' ? selectedFamilyMember : undefined);
   
-  // New income form data state
+  // New income form data state with the enhanced categorization structure
   const [newIncome, setNewIncome] = useState<{ 
     amount: number; 
-    category_id: number; 
+    income_type_id: number;
+    income_category_id: number;
+    income_sub_category_id: number;
     description: string; 
     date: string;
     family_member_id: string;
   }>({ 
     amount: 0, 
-    category_id: 0, 
+    income_type_id: 0,
+    income_category_id: 0,
+    income_sub_category_id: 0,
     description: '', 
     date: new Date().toISOString().split('T')[0],
     family_member_id: '' 
   });
   
-  // State for editing income
-  const [editingIncome, setEditingIncome] = useState<(IncomeItem & { category_id: number, family_member_id: string }) | null>(null);
+  // State for editing income with the enhanced categorization structure
+  const [editingIncome, setEditingIncome] = useState<(IncomeItem & { 
+    income_type_id: number,
+    income_category_id: number,
+    income_sub_category_id: number,
+    family_member_id: string 
+  }) | null>(null);
 
   // Set default family member when family members data is loaded
   React.useEffect(() => {
@@ -59,14 +71,14 @@ const IncomePage = () => {
     }
   }, [familyMembers]);
 
-  // Create a map of category names to IDs for easier lookup
+  // Create a map of category names to IDs for easier lookup (legacy)
   const categoryIdMap: Record<string, number> = {};
   categories.forEach(category => {
     categoryIdMap[category.name] = category.category_id;
   });
 
   const handleAddIncome = async () => {
-    if (newIncome.amount <= 0 || !newIncome.category_id) {
+    if (newIncome.amount <= 0 || !newIncome.income_type_id || !newIncome.income_category_id || !newIncome.income_sub_category_id) {
       // We can use toast here directly as it's already handled in the hook
       return;
     }
@@ -76,7 +88,9 @@ const IncomePage = () => {
     // Reset form
     setNewIncome({ 
       amount: 0, 
-      category_id: 0, 
+      income_type_id: 0,
+      income_category_id: 0,
+      income_sub_category_id: 0,
       description: '', 
       date: new Date().toISOString().split('T')[0],
       family_member_id: newIncome.family_member_id // Keep the currently selected family member
@@ -85,14 +99,32 @@ const IncomePage = () => {
   };
 
   const handleEditIncome = async () => {
-    if (!editingIncome || editingIncome.amount <= 0 || !editingIncome.category_id) {
+    if (!editingIncome || editingIncome.amount <= 0 || !editingIncome.income_type_id || !editingIncome.income_category_id || !editingIncome.income_sub_category_id) {
       return;
     }
     
-    const { id, amount, category_id, description, date, family_member_id } = editingIncome;
+    const { 
+      id, 
+      amount, 
+      income_type_id, 
+      income_category_id, 
+      income_sub_category_id, 
+      description, 
+      date, 
+      family_member_id 
+    } = editingIncome;
+    
     updateIncomeItem({ 
       id, 
-      incomeData: { amount, category_id, description, date, family_member_id } 
+      incomeData: { 
+        amount, 
+        income_type_id, 
+        income_category_id, 
+        income_sub_category_id, 
+        description, 
+        date, 
+        family_member_id 
+      } 
     });
     
     setEditingIncome(null);
@@ -144,7 +176,7 @@ const IncomePage = () => {
     }
   };
 
-  const startEditIncome = (income: IncomeItem, categoryId: number) => {
+  const startEditIncome = (income: IncomeItem) => {
     // Format the date properly for the edit form (ISO format for the date input)
     let formattedDate = income.date;
     
@@ -172,12 +204,16 @@ const IncomePage = () => {
 
     console.log("Original date:", income.date, "Formatted date:", formattedDate);
     
+    // Use the income's existing values for the enhanced categorization if available
     setEditingIncome({
       ...income,
       date: formattedDate,
-      category_id: categoryId,
+      income_type_id: income.income_type_id || 0,
+      income_category_id: income.income_category_id || 0,
+      income_sub_category_id: income.income_sub_category_id || 0,
       family_member_id: income.family_member_id || ''
     });
+    
     setIsDialogOpen(true);
   };
 
@@ -208,7 +244,10 @@ const IncomePage = () => {
                 formData={editingIncome || newIncome}
                 onFormChange={editingIncome ? handleEditingIncomeChange : handleNewIncomeChange}
                 onSubmit={editingIncome ? handleEditIncome : handleAddIncome}
-                categories={categories}
+                categories={categories} // Legacy categories
+                incomeTypes={incomeTypes} // New income types
+                getIncomeCategoriesByType={getIncomeCategoriesByType}
+                getIncomeSubCategoriesByCategory={getIncomeSubCategoriesByCategory}
                 familyMembers={familyMembers}
               />
             </DialogContent>

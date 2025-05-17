@@ -4,8 +4,14 @@ import {
   Income,
   IncomeItem, 
   IncomeCategory,
+  IncomeType,
+  IncomeCategoryWithTypeId,
+  IncomeSubCategory,
   getAllIncomes, 
-  getIncomeCategories, 
+  getIncomeCategories,
+  getAllIncomeTypes,
+  getIncomeCategoriesByTypeId,
+  getIncomeSubCategoriesByCategoryId,
   addIncome, 
   updateIncome, 
   deleteIncome 
@@ -37,7 +43,7 @@ export const useIncomeApi = (familyMemberId?: string) => {
     }
   });
 
-  // Query for fetching categories
+  // Query for fetching categories (legacy)
   const {
     data: categories = [],
     isLoading: isCategoriesLoading,
@@ -57,11 +63,63 @@ export const useIncomeApi = (familyMemberId?: string) => {
     }
   });
 
+  // Query for fetching income types
+  const {
+    data: incomeTypes = [],
+    isLoading: isIncomeTypesLoading,
+    isError: isIncomeTypesError
+  } = useQuery({
+    queryKey: ['incomeTypes'],
+    queryFn: getAllIncomeTypes,
+    meta: {
+      onError: (error: Error) => {
+        console.error('Error fetching income types:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load income types. Using demo types instead.",
+          variant: "destructive",
+        });
+      }
+    }
+  });
+
+  // Function to fetch income categories based on type
+  const getIncomeCategoriesByType = async (typeId: number) => {
+    try {
+      return await getIncomeCategoriesByTypeId(typeId);
+    } catch (error) {
+      console.error(`Error fetching income categories for type ${typeId}:`, error);
+      toast({
+        title: "Error",
+        description: `Failed to load income categories for type ${typeId}.`,
+        variant: "destructive",
+      });
+      return [];
+    }
+  };
+
+  // Function to fetch income subcategories based on category
+  const getIncomeSubCategoriesByCategory = async (categoryId: number) => {
+    try {
+      return await getIncomeSubCategoriesByCategoryId(categoryId);
+    } catch (error) {
+      console.error(`Error fetching income subcategories for category ${categoryId}:`, error);
+      toast({
+        title: "Error",
+        description: `Failed to load income subcategories for category ${categoryId}.`,
+        variant: "destructive",
+      });
+      return [];
+    }
+  };
+
   // Mutation for adding income
   const addIncomeMutation = useMutation({
     mutationFn: (newIncomeData: {
       amount: number;
-      category_id: number;
+      income_type_id: number;
+      income_category_id: number;
+      income_sub_category_id: number;
       description: string;
       date: string;
       family_member_id?: string;
@@ -99,7 +157,9 @@ export const useIncomeApi = (familyMemberId?: string) => {
       id: string | number; 
       incomeData: {
         amount: number;
-        category_id: number;
+        income_type_id: number;
+        income_category_id: number;
+        income_sub_category_id: number;
         description: string;
         date: string;
         family_member_id?: string;
@@ -162,13 +222,18 @@ export const useIncomeApi = (familyMemberId?: string) => {
     }
   });
 
-  const isLoading = isIncomesLoading || isCategoriesLoading;
-  const isError = isIncomesError || isCategoriesError;
-  const isApiAvailable = Array.isArray(incomes) && incomes.length > 0 || Array.isArray(categories) && categories.length > 0;
+  const isLoading = isIncomesLoading || isCategoriesLoading || isIncomeTypesLoading;
+  const isError = isIncomesError || isCategoriesError || isIncomeTypesError;
+  const isApiAvailable = Array.isArray(incomes) && incomes.length > 0 || 
+                         Array.isArray(categories) && categories.length > 0 ||
+                         Array.isArray(incomeTypes) && incomeTypes.length > 0;
 
   return {
     incomes: Array.isArray(incomes) ? incomes : [],
-    categories: Array.isArray(categories) ? categories : [],
+    categories: Array.isArray(categories) ? categories : [], // Legacy
+    incomeTypes: Array.isArray(incomeTypes) ? incomeTypes : [],
+    getIncomeCategoriesByType,
+    getIncomeSubCategoriesByCategory,
     isLoading,
     isError,
     isApiAvailable,

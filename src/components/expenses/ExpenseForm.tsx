@@ -6,84 +6,80 @@ import { Label } from '@/components/ui/label';
 import { Check } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
-  IncomeCategory, 
-  IncomeItem, 
-  IncomeType,
-  IncomeCategoryWithTypeId,
-  IncomeSubCategory
-} from '@/services/incomeService';
+  ExpenseType, 
+  ExpenseCategoryWithTypeId, 
+  ExpenseSubCategory 
+} from '@/services/expenseService';
 import { FamilyMember } from '@/services/familyService';
 
-interface IncomeFormProps {
+interface ExpenseFormProps {
   isEditing: boolean;
   formData: {
     amount: number;
-    category_id?: number; // Kept for backward compatibility
-    income_type_id: number;
-    income_category_id: number;
-    income_sub_category_id: number;
+    category?: string; // Legacy, kept for backward compatibility
+    expense_type_id: number;
+    expense_category_id: number;
+    expense_sub_category_id: number;
     description: string;
     date: string;
     family_member_id: string;
   };
   onFormChange: (field: string, value: string | number) => void;
   onSubmit: () => void;
-  categories: IncomeCategory[]; // Legacy categories, kept for backward compatibility
-  incomeTypes: IncomeType[]; // New types
+  expenseTypes: ExpenseType[];
   familyMembers: FamilyMember[];
-  getIncomeCategoriesByType: (typeId: number) => Promise<IncomeCategoryWithTypeId[]>;
-  getIncomeSubCategoriesByCategory: (categoryId: number) => Promise<IncomeSubCategory[]>;
+  getExpenseCategoriesByType: (typeId: number) => Promise<ExpenseCategoryWithTypeId[]>;
+  getExpenseSubCategoriesByCategory: (categoryId: number) => Promise<ExpenseSubCategory[]>;
 }
 
-const IncomeForm: React.FC<IncomeFormProps> = ({
+const ExpenseForm: React.FC<ExpenseFormProps> = ({
   isEditing,
   formData,
   onFormChange,
   onSubmit,
-  categories,
-  incomeTypes = [],
+  expenseTypes = [],
   familyMembers,
-  getIncomeCategoriesByType,
-  getIncomeSubCategoriesByCategory
+  getExpenseCategoriesByType,
+  getExpenseSubCategoriesByCategory
 }) => {
-  const [incomeCategories, setIncomeCategories] = useState<IncomeCategoryWithTypeId[]>([]);
-  const [incomeSubCategories, setIncomeSubCategories] = useState<IncomeSubCategory[]>([]);
+  const [expenseCategories, setExpenseCategories] = useState<ExpenseCategoryWithTypeId[]>([]);
+  const [expenseSubCategories, setExpenseSubCategories] = useState<ExpenseSubCategory[]>([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(false);
   const [isLoadingSubCategories, setIsLoadingSubCategories] = useState(false);
 
   // Fetch categories when type changes
   useEffect(() => {
-    if (formData.income_type_id) {
+    if (formData.expense_type_id) {
       setIsLoadingCategories(true);
-      getIncomeCategoriesByType(formData.income_type_id)
+      getExpenseCategoriesByType(formData.expense_type_id)
         .then(categories => {
-          setIncomeCategories(categories);
+          setExpenseCategories(categories);
           setIsLoadingCategories(false);
         })
         .catch(() => {
           setIsLoadingCategories(false);
         });
     } else {
-      setIncomeCategories([]);
+      setExpenseCategories([]);
     }
-  }, [formData.income_type_id, getIncomeCategoriesByType]);
+  }, [formData.expense_type_id, getExpenseCategoriesByType]);
 
   // Fetch subcategories when category changes
   useEffect(() => {
-    if (formData.income_category_id) {
+    if (formData.expense_category_id) {
       setIsLoadingSubCategories(true);
-      getIncomeSubCategoriesByCategory(formData.income_category_id)
+      getExpenseSubCategoriesByCategory(formData.expense_category_id)
         .then(subCategories => {
-          setIncomeSubCategories(subCategories);
+          setExpenseSubCategories(subCategories);
           setIsLoadingSubCategories(false);
         })
         .catch(() => {
           setIsLoadingSubCategories(false);
         });
     } else {
-      setIncomeSubCategories([]);
+      setExpenseSubCategories([]);
     }
-  }, [formData.income_category_id, getIncomeSubCategoriesByCategory]);
+  }, [formData.expense_category_id, getExpenseSubCategoriesByCategory]);
 
   return (
     <div className="grid gap-4 py-4">
@@ -101,24 +97,24 @@ const IncomeForm: React.FC<IncomeFormProps> = ({
         />
       </div>
       
-      {/* Income Type Selection */}
+      {/* Expense Type Selection */}
       <div className="grid gap-2">
-        <Label htmlFor="income_type_id">Income Type</Label>
+        <Label htmlFor="expense_type_id">Expense Type</Label>
         <Select
-          value={String(formData.income_type_id || "")}
+          value={String(formData.expense_type_id || "")}
           onValueChange={(value) => {
             const typeId = parseInt(value);
-            onFormChange('income_type_id', typeId);
+            onFormChange('expense_type_id', typeId);
             // Reset category and subcategory when type changes
-            onFormChange('income_category_id', 0);
-            onFormChange('income_sub_category_id', 0);
+            onFormChange('expense_category_id', 0);
+            onFormChange('expense_sub_category_id', 0);
           }}
         >
           <SelectTrigger className="bg-fintrack-bg-dark border-fintrack-bg-dark">
-            <SelectValue placeholder="Select income type" />
+            <SelectValue placeholder="Select expense type" />
           </SelectTrigger>
           <SelectContent className="bg-fintrack-card-dark border-fintrack-bg-dark">
-            {incomeTypes.map((type) => (
+            {expenseTypes.map((type) => (
               <SelectItem key={type.id} value={String(type.id)}>
                 {type.name}
               </SelectItem>
@@ -127,24 +123,24 @@ const IncomeForm: React.FC<IncomeFormProps> = ({
         </Select>
       </div>
       
-      {/* Income Category Selection */}
+      {/* Expense Category Selection */}
       <div className="grid gap-2">
-        <Label htmlFor="income_category_id">Income Category</Label>
+        <Label htmlFor="expense_category_id">Expense Category</Label>
         <Select
-          value={String(formData.income_category_id || "")}
+          value={String(formData.expense_category_id || "")}
           onValueChange={(value) => {
             const categoryId = parseInt(value);
-            onFormChange('income_category_id', categoryId);
+            onFormChange('expense_category_id', categoryId);
             // Reset subcategory when category changes
-            onFormChange('income_sub_category_id', 0);
+            onFormChange('expense_sub_category_id', 0);
           }}
-          disabled={!formData.income_type_id || isLoadingCategories}
+          disabled={!formData.expense_type_id || isLoadingCategories}
         >
           <SelectTrigger className="bg-fintrack-bg-dark border-fintrack-bg-dark">
-            <SelectValue placeholder={isLoadingCategories ? "Loading categories..." : "Select income category"} />
+            <SelectValue placeholder={isLoadingCategories ? "Loading categories..." : "Select expense category"} />
           </SelectTrigger>
           <SelectContent className="bg-fintrack-card-dark border-fintrack-bg-dark">
-            {incomeCategories.map((category) => (
+            {expenseCategories.map((category) => (
               <SelectItem key={category.id} value={String(category.id)}>
                 {category.name}
               </SelectItem>
@@ -153,22 +149,22 @@ const IncomeForm: React.FC<IncomeFormProps> = ({
         </Select>
       </div>
       
-      {/* Income Sub Category Selection */}
+      {/* Expense Sub Category Selection */}
       <div className="grid gap-2">
-        <Label htmlFor="income_sub_category_id">Income Sub Category</Label>
+        <Label htmlFor="expense_sub_category_id">Expense Sub Category</Label>
         <Select
-          value={String(formData.income_sub_category_id || "")}
+          value={String(formData.expense_sub_category_id || "")}
           onValueChange={(value) => {
             const subCategoryId = parseInt(value);
-            onFormChange('income_sub_category_id', subCategoryId);
+            onFormChange('expense_sub_category_id', subCategoryId);
           }}
-          disabled={!formData.income_category_id || isLoadingSubCategories}
+          disabled={!formData.expense_category_id || isLoadingSubCategories}
         >
           <SelectTrigger className="bg-fintrack-bg-dark border-fintrack-bg-dark">
-            <SelectValue placeholder={isLoadingSubCategories ? "Loading subcategories..." : "Select income subcategory"} />
+            <SelectValue placeholder={isLoadingSubCategories ? "Loading subcategories..." : "Select expense subcategory"} />
           </SelectTrigger>
           <SelectContent className="bg-fintrack-card-dark border-fintrack-bg-dark">
-            {incomeSubCategories.map((subCategory) => (
+            {expenseSubCategories.map((subCategory) => (
               <SelectItem key={subCategory.id} value={String(subCategory.id)}>
                 {subCategory.name}
               </SelectItem>
@@ -223,13 +219,13 @@ const IncomeForm: React.FC<IncomeFormProps> = ({
       <Button 
         onClick={onSubmit}
         className="mt-2 bg-fintrack-purple hover:bg-fintrack-purple/90"
-        disabled={!formData.amount || !formData.income_type_id || !formData.income_category_id || !formData.income_sub_category_id}
+        disabled={!formData.amount || !formData.expense_type_id || !formData.expense_category_id || !formData.expense_sub_category_id}
       >
         <Check className="h-4 w-4 mr-2" />
-        {isEditing ? 'Update Income' : 'Add Income'}
+        {isEditing ? 'Update Expense' : 'Add Expense'}
       </Button>
     </div>
   );
 };
 
-export default IncomeForm;
+export default ExpenseForm;

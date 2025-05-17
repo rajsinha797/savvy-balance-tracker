@@ -8,7 +8,13 @@ import {
   updateExpense,
   deleteExpense,
   Expense,
-  ExpenseFormData
+  ExpenseFormData,
+  ExpenseType,
+  ExpenseCategoryWithTypeId,
+  ExpenseSubCategory,
+  getAllExpenseTypes,
+  getExpenseCategoriesByTypeId,
+  getExpenseSubCategoriesByCategoryId
 } from '@/services/expenseService';
 import { 
   getAllExpenseCategories,
@@ -40,7 +46,7 @@ export const useExpenseApi = (familyMemberId?: string) => {
     }
   });
 
-  // Get expense categories
+  // Get expense categories (legacy)
   const {
     data: expenseCategories = [],
     isLoading: isLoadingCategories,
@@ -60,6 +66,56 @@ export const useExpenseApi = (familyMemberId?: string) => {
       }
     }
   });
+
+  // Get expense types (new)
+  const {
+    data: expenseTypes = [],
+    isLoading: isLoadingExpenseTypes,
+    isError: isErrorExpenseTypes
+  } = useQuery({
+    queryKey: ['expenseTypes'],
+    queryFn: getAllExpenseTypes,
+    meta: {
+      onError: (error: Error) => {
+        console.error('Error fetching expense types:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load expense types. Please try again.",
+          variant: "destructive",
+        });
+      }
+    }
+  });
+
+  // Function to fetch expense categories based on type
+  const getExpenseCategoriesByType = async (typeId: number) => {
+    try {
+      return await getExpenseCategoriesByTypeId(typeId);
+    } catch (error) {
+      console.error(`Error fetching expense categories for type ${typeId}:`, error);
+      toast({
+        title: "Error",
+        description: `Failed to load expense categories for type ${typeId}.`,
+        variant: "destructive",
+      });
+      return [];
+    }
+  };
+
+  // Function to fetch expense subcategories based on category
+  const getExpenseSubCategoriesByCategory = async (categoryId: number) => {
+    try {
+      return await getExpenseSubCategoriesByCategoryId(categoryId);
+    } catch (error) {
+      console.error(`Error fetching expense subcategories for category ${categoryId}:`, error);
+      toast({
+        title: "Error",
+        description: `Failed to load expense subcategories for category ${categoryId}.`,
+        variant: "destructive",
+      });
+      return [];
+    }
+  };
 
   // Create expense mutation
   const createExpenseMutation = useMutation({
@@ -133,15 +189,25 @@ export const useExpenseApi = (familyMemberId?: string) => {
     }
   });
 
+  const isLoading = isLoadingExpenses || isLoadingCategories || isLoadingExpenseTypes;
+  const isError = isErrorExpenses || isErrorCategories || isErrorExpenseTypes;
+
   return {
     expenses,
-    expenseCategories,
+    expenseCategories, // legacy
+    expenseTypes, // new
+    getExpenseCategoriesByType,
+    getExpenseSubCategoriesByCategory,
     isLoadingExpenses,
     isLoadingCategories,
+    isLoadingExpenseTypes,
     isErrorExpenses,
     isErrorCategories,
+    isErrorExpenseTypes,
     expensesError,
     categoriesError,
+    isLoading,
+    isError,
     createExpense: createExpenseMutation.mutate,
     updateExpense: updateExpenseMutation.mutate,
     deleteExpense: deleteExpenseMutation.mutate

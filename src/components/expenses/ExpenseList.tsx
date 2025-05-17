@@ -3,33 +3,31 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Edit, Trash2 } from 'lucide-react';
-import { IncomeItem } from '@/services/incomeService';
+import { ExpenseItem } from '@/services/expenseService';
 
-interface IncomeListProps {
-  incomes: IncomeItem[];
+interface ExpenseListProps {
+  expenses: ExpenseItem[];
   isLoading: boolean;
-  onEditIncome: (income: IncomeItem) => void;
-  onDeleteIncome: (id: string | number) => void;
-  categoryIdMap: Record<string, number>;
+  onEditExpense: (expense: ExpenseItem) => void;
+  onDeleteExpense: (id: string | number) => void;
 }
 
-const IncomeList: React.FC<IncomeListProps> = ({
-  incomes = [], // Provide default empty array
+const ExpenseList: React.FC<ExpenseListProps> = ({
+  expenses = [], // Provide default empty array
   isLoading,
-  onEditIncome,
-  onDeleteIncome,
-  categoryIdMap = {}, // Provide default empty object
+  onEditExpense,
+  onDeleteExpense
 }) => {
-  // Ensure incomes is an array
-  const safeIncomes = Array.isArray(incomes) ? incomes : [];
+  // Ensure expenses is an array
+  const safeExpenses = Array.isArray(expenses) ? expenses : [];
 
-  // Debug the income data to understand what's happening
-  console.log("Income data in IncomeList:", safeIncomes);
+  // Debug the expense data
+  console.log("Expense data in ExpenseList:", safeExpenses);
 
   return (
     <Card className="card-gradient border-none">
       <CardHeader>
-        <CardTitle className="text-xl font-semibold">Income Entries</CardTitle>
+        <CardTitle className="text-xl font-semibold">Expense Entries</CardTitle>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -52,34 +50,34 @@ const IncomeList: React.FC<IncomeListProps> = ({
                 </tr>
               </thead>
               <tbody>
-                {safeIncomes.map((income) => {
+                {safeExpenses.map((expense) => {
                   // Ensure amount is treated as a number
-                  const amount = typeof income.amount === 'number' ? income.amount : 
-                                 (typeof income.amount === 'string' ? parseFloat(income.amount) : 0);
+                  const amount = typeof expense.amount === 'number' ? expense.amount : 
+                                (typeof expense.amount === 'string' ? parseFloat(expense.amount) : 0);
                                  
                   return (
-                    <tr key={income.id} className="border-b border-fintrack-bg-dark">
-                      <td className="px-4 py-3 text-sm whitespace-nowrap">{income.date}</td>
+                    <tr key={expense.id} className="border-b border-fintrack-bg-dark">
+                      <td className="px-4 py-3 text-sm whitespace-nowrap">{expense.date}</td>
                       <td className="px-4 py-3 text-sm whitespace-nowrap">
-                        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-blue-500/10 text-blue-500">
-                          {income.income_type_name || "N/A"}
+                        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-yellow-500/10 text-yellow-500">
+                          {expense.expense_type_name || "N/A"}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-sm whitespace-nowrap">
-                        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-green-500/10 text-green-500">
-                          {income.income_category_name || income.category || "N/A"}
+                        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-red-500/10 text-red-500">
+                          {expense.expense_category_name || expense.category || "N/A"}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-sm whitespace-nowrap">
-                        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-purple-500/10 text-purple-500">
-                          {income.income_sub_category_name || "N/A"}
+                        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-orange-500/10 text-orange-500">
+                          {expense.expense_sub_category_name || "N/A"}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-sm whitespace-nowrap">
-                        {income.family_member || "Not assigned"}
+                        {expense.family_member || "Not assigned"}
                       </td>
-                      <td className="px-4 py-3 text-sm">{income.description}</td>
-                      <td className="px-4 py-3 text-sm font-medium text-green-500 text-right">
+                      <td className="px-4 py-3 text-sm">{expense.description}</td>
+                      <td className="px-4 py-3 text-sm font-medium text-red-500 text-right">
                         ₹{amount.toFixed(2)}
                       </td>
                       <td className="px-4 py-3 text-right whitespace-nowrap">
@@ -87,7 +85,7 @@ const IncomeList: React.FC<IncomeListProps> = ({
                           size="icon"
                           variant="ghost"
                           onClick={() => {
-                            onEditIncome(income);
+                            onEditExpense(expense);
                           }}
                           className="h-8 w-8 text-fintrack-text-secondary"
                         >
@@ -96,7 +94,7 @@ const IncomeList: React.FC<IncomeListProps> = ({
                         <Button
                           size="icon"
                           variant="ghost"
-                          onClick={() => onDeleteIncome(String(income.id))}
+                          onClick={() => onDeleteExpense(String(expense.id))}
                           className="h-8 w-8 text-fintrack-text-secondary"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -105,10 +103,10 @@ const IncomeList: React.FC<IncomeListProps> = ({
                     </tr>
                   );
                 })}
-                {safeIncomes.length === 0 && (
+                {safeExpenses.length === 0 && (
                   <tr>
                     <td colSpan={8} className="px-4 py-6 text-center text-fintrack-text-secondary">
-                      No income entries found. Add your first income entry.
+                      No expense entries found. Add your first expense entry.
                     </td>
                   </tr>
                 )}
@@ -121,32 +119,4 @@ const IncomeList: React.FC<IncomeListProps> = ({
   );
 };
 
-// Helper function to format date for the edit form (ensure YYYY-MM-DD format)
-const formatDateForForm = (dateString: string): string => {
-  if (!dateString) return '';
-  
-  // If date is already in YYYY-MM-DD format, return it
-  if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
-    return dateString;
-  }
-  
-  try {
-    // Handle DD/MM/YYYY format
-    if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateString)) {
-      const [day, month, year] = dateString.split('/');
-      return `${year}-${month}-${day}`;
-    }
-    
-    // Try to parse any other format using Date
-    const date = new Date(dateString);
-    if (!isNaN(date.getTime())) {
-      return date.toISOString().split('T')[0];
-    }
-  } catch (e) {
-    console.error('Error parsing date:', e);
-  }
-  
-  return dateString;
-};
-
-export default IncomeList;
+export default ExpenseList;

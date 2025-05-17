@@ -8,6 +8,12 @@ export interface Income {
   id: string | number;
   amount: number;
   category: string;
+  income_type_id?: number;
+  income_category_id?: number;
+  income_sub_category_id?: number;
+  income_type_name?: string;
+  income_category_name?: string;
+  income_sub_category_name?: string;
   date: string;
   description: string;
   family_member?: string;
@@ -22,7 +28,10 @@ export interface IncomeItem extends Income {
 export interface IncomeFormData {
   id?: string | number;
   amount: number;
-  category_id: number;
+  category_id?: number; // For backward compatibility
+  income_type_id: number;
+  income_category_id: number;
+  income_sub_category_id: number;
   date: string;
   description: string;
   family_member_id?: string;
@@ -30,6 +39,23 @@ export interface IncomeFormData {
 
 export interface IncomeCategory {
   category_id: number;
+  name: string;
+}
+
+export interface IncomeType {
+  id: number;
+  name: string;
+}
+
+export interface IncomeCategoryWithTypeId {
+  id: number;
+  income_type_id: number;
+  name: string;
+}
+
+export interface IncomeSubCategory {
+  id: number;
+  income_category_id: number;
   name: string;
 }
 
@@ -55,17 +81,49 @@ const formatDate = (dateString: string): string => {
   }
 };
 
-// Alias function to match what the useIncomeApi.ts expects
+// Alias function to match what the useIncomeApi.ts expects (legacy)
 export const getIncomeCategories = async (): Promise<IncomeCategory[]> => {
   return getAllIncomeCategories();
 };
 
+// Legacy function for backward compatibility
 export const getAllIncomeCategories = async (): Promise<IncomeCategory[]> => {
   try {
     const response = await axios.get(`${API_URL}/api/income/categories`);
     return response.data;
   } catch (error) {
     console.error('Error fetching income categories:', error);
+    throw error;
+  }
+};
+
+// New functions for the enhanced categorization system
+export const getAllIncomeTypes = async (): Promise<IncomeType[]> => {
+  try {
+    const response = await axios.get(`${API_URL}/api/income/types`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching income types:', error);
+    throw error;
+  }
+};
+
+export const getIncomeCategoriesByTypeId = async (typeId: number): Promise<IncomeCategoryWithTypeId[]> => {
+  try {
+    const response = await axios.get(`${API_URL}/api/income/categories/by-type/${typeId}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching income categories for type ${typeId}:`, error);
+    throw error;
+  }
+};
+
+export const getIncomeSubCategoriesByCategoryId = async (categoryId: number): Promise<IncomeSubCategory[]> => {
+  try {
+    const response = await axios.get(`${API_URL}/api/income/subcategories/by-category/${categoryId}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching income subcategories for category ${categoryId}:`, error);
     throw error;
   }
 };
