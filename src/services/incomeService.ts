@@ -14,6 +14,11 @@ export interface Income {
   family_member_id?: number;
 }
 
+// This interface is used by other components but was missing
+export interface IncomeItem extends Income {
+  id: string | number;
+}
+
 export interface IncomeFormData {
   id?: number;
   amount: number;
@@ -26,6 +31,13 @@ export interface IncomeFormData {
 export interface IncomeCategory {
   category_id: number;
   name: string;
+}
+
+// Add the expected response interface
+export interface ApiResponse {
+  success: boolean;
+  message: string;
+  data?: any;
 }
 
 // Helper function to format dates consistently
@@ -43,6 +55,11 @@ const formatDate = (dateString: string): string => {
   }
 };
 
+// Alias function to match what the useIncomeApi.ts expects
+export const getIncomeCategories = async (): Promise<IncomeCategory[]> => {
+  return getAllIncomeCategories();
+};
+
 export const getAllIncomeCategories = async (): Promise<IncomeCategory[]> => {
   try {
     const response = await axios.get(`${API_URL}/api/income/categories`);
@@ -53,7 +70,7 @@ export const getAllIncomeCategories = async (): Promise<IncomeCategory[]> => {
   }
 };
 
-export const getAllIncomes = async (familyMemberId?: number): Promise<Income[]> => {
+export const getAllIncomes = async (familyMemberId?: number | string): Promise<Income[]> => {
   try {
     const url = familyMemberId 
       ? `${API_URL}/api/income?family_member_id=${familyMemberId}` 
@@ -87,37 +104,68 @@ export const getIncome = async (id: number): Promise<Income> => {
   }
 };
 
-export const createIncome = async (income: IncomeFormData): Promise<Income> => {
+// Renamed function to match what useIncomeApi.ts is expecting
+export const addIncome = async (income: IncomeFormData): Promise<ApiResponse> => {
   try {
     const response = await axios.post(`${API_URL}/api/income`, income);
     return {
-      ...response.data,
-      amount: parseFloat(response.data.amount || 0) // Ensure amount is a number
+      success: true,
+      message: 'Income added successfully',
+      data: {
+        ...response.data,
+        amount: parseFloat(response.data.amount || 0) // Ensure amount is a number
+      }
     };
   } catch (error) {
     console.error('Error creating income:', error);
-    throw error;
+    return {
+      success: false,
+      message: 'Failed to add income'
+    };
   }
 };
 
-export const updateIncome = async (id: number, income: IncomeFormData): Promise<Income> => {
+// Updated to return ApiResponse to match what useIncomeApi.ts expects
+export const updateIncome = async (id: number | string, income: IncomeFormData): Promise<ApiResponse> => {
   try {
-    const response = await axios.put(`${API_URL}/api/income/${id}`, income);
+    const numericId = typeof id === 'string' ? parseInt(id) : id;
+    const response = await axios.put(`${API_URL}/api/income/${numericId}`, income);
     return {
-      ...response.data,
-      amount: parseFloat(response.data.amount || 0) // Ensure amount is a number
+      success: true,
+      message: 'Income updated successfully',
+      data: {
+        ...response.data,
+        amount: parseFloat(response.data.amount || 0) // Ensure amount is a number
+      }
     };
   } catch (error) {
     console.error(`Error updating income ${id}:`, error);
-    throw error;
+    return {
+      success: false,
+      message: 'Failed to update income'
+    };
   }
 };
 
-export const deleteIncome = async (id: number): Promise<void> => {
+// Updated to return ApiResponse to match what useIncomeApi.ts expects
+export const deleteIncome = async (id: number | string): Promise<ApiResponse> => {
   try {
-    await axios.delete(`${API_URL}/api/income/${id}`);
+    const numericId = typeof id === 'string' ? parseInt(id) : id;
+    await axios.delete(`${API_URL}/api/income/${numericId}`);
+    return {
+      success: true,
+      message: 'Income deleted successfully'
+    };
   } catch (error) {
     console.error(`Error deleting income ${id}:`, error);
-    throw error;
+    return {
+      success: false,
+      message: 'Failed to delete income'
+    };
   }
+};
+
+// Helper function for formatting date for display
+export const formatDateForDisplay = (dateString: string): string => {
+  return formatDate(dateString);
 };
