@@ -1,3 +1,4 @@
+
 import express from 'express';
 import cors from 'cors';
 import mysql from 'mysql2/promise';
@@ -757,10 +758,19 @@ app.put('/api/budgets/:id', async (req, res) => {
 
     // Get the updated budget
     const [budgets] = await pool.query('SELECT * FROM budgets WHERE id = ?', [id]);
+    
+    // Fixed: Ensure we're properly handling the array result, not trying to access properties of OkPacket
+    if (!budgets || !Array.isArray(budgets) || budgets.length === 0) {
+      return res.status(500).json({ 
+        status: 'error', 
+        message: 'Failed to fetch updated budget data' 
+      });
+    }
+    
     const [categories] = await pool.query('SELECT * FROM budget_categories WHERE budget_id = ?', [id]);
 
     // Calculate remaining and percentage for each category
-    const formattedCategories = categories.map(category => {
+    const formattedCategories = Array.isArray(categories) ? categories.map(category => {
       const remaining = category.allocated - category.spent;
       const percentageUsed = category.allocated > 0 
         ? Math.round((category.spent / category.allocated) * 100) 
@@ -769,12 +779,14 @@ app.put('/api/budgets/:id', async (req, res) => {
       return {
         id: category.id,
         category: category.category,
+        type: category.type,
+        subCategory: category.sub_category,
         allocated: parseFloat(category.allocated),
         spent: parseFloat(category.spent),
         remaining,
         percentageUsed
       };
-    });
+    }) : [];
 
     const budget = budgets[0];
     res.json({
