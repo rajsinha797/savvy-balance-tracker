@@ -6,6 +6,8 @@ const API_URL = 'http://localhost:3001';
 export interface BudgetCategory {
   id: string;
   category: string;
+  type?: string;
+  subCategory?: string;
   allocated: number;
   spent: number;
   remaining: number;
