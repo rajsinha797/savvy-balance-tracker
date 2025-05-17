@@ -1,4 +1,3 @@
-
 import express from 'express';
 import cors from 'cors';
 import mysql from 'mysql2/promise';
@@ -1047,7 +1046,7 @@ app.get('/api/expense-categories', async (req, res) => {
     `);
 
     // If the table doesn't exist, create it and add some default categories
-    if (tables.length === 0) {
+    if (!isResultArray(tables) || tables.length === 0) {
       await pool.query(`
         CREATE TABLE expense_categories (
           id INT AUTO_INCREMENT PRIMARY KEY,
