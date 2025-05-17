@@ -423,7 +423,7 @@ app.post('/api/budgets/sync-expenses', async (req, res) => {
       [year, month]
     );
 
-    if (budgets.length === 0) {
+    if (!budgets || budgets.length === 0) {
       return res.status(404).json({
         status: 'error',
         message: 'No budget found for this period'
@@ -452,7 +452,7 @@ app.post('/api/budgets/sync-expenses', async (req, res) => {
         [budgetId, expense.category, expense.type || null, expense.sub_category || null]
       );
 
-      if (categories.length > 0) {
+      if (categories && categories.length > 0) {
         const category = categories[0];
         
         // Update the spent amount
@@ -1330,7 +1330,9 @@ app.put('/api/family/members/:id', async (req, res) => {
     res.json({ status: 'success', message: 'Family member updated successfully' });
   } catch (error) {
     console.error('Error updating family member:', error);
-    res.status(500).json({ status: 'error', message: 'Failed to update family member' });
+    res.status(500).json({ 
+      status: 'error', 
+      message: 'Failed to update family member' });
   }
 });
 
