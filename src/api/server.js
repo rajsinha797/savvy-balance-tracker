@@ -44,7 +44,7 @@ const errorHandler = (err, req, res, next) => {
 
 // Helper function to check if a query result is an array
 const isResultArray = (result) => {
-  return Array.isArray(result) && result.length !== undefined;
+  return Array.isArray(result);
 };
 
 // API Documentation endpoint
@@ -506,7 +506,7 @@ app.get('/api/budgets', async (req, res) => {
     `);
 
     // If the table doesn't exist, create it
-    if (tables.length === 0) {
+    if (!isResultArray(tables) || tables.length === 0) {
       await pool.query(`
         CREATE TABLE budgets (
           id VARCHAR(36) PRIMARY KEY,
@@ -764,7 +764,7 @@ app.put('/api/budgets/:id', async (req, res) => {
     // Get the updated budget
     const [budgets] = await pool.query('SELECT * FROM budgets WHERE id = ?', [id]);
     
-    // Fixed: Ensure we're properly handling the array result, not trying to access properties of OkPacket
+    // Check if budgets is an array and not empty
     if (!isResultArray(budgets) || budgets.length === 0) {
       return res.status(500).json({ 
         status: 'error', 
