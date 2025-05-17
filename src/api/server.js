@@ -446,6 +446,13 @@ app.post('/api/budgets/sync-expenses', async (req, res) => {
       [year, month]
     );
 
+    if (!isResultArray(expenses)) {
+      return res.status(500).json({
+        status: 'error',
+        message: 'Failed to fetch expenses'
+      });
+    }
+
     // Update budget category spent amounts
     for (const expense of expenses) {
       // Find matching budget category
@@ -544,43 +551,46 @@ app.get('/api/budgets', async (req, res) => {
 
     // For each budget, get the categories
     const result = [];
-    for (const budget of budgets) {
-      const [categories] = await pool.query(`
-        SELECT 
-          id, category, type, sub_category, allocated, spent
-        FROM 
-          budget_categories
-        WHERE 
-          budget_id = ?
-      `, [budget.id]);
-
-      // Calculate remaining and percentage for each category
-      const formattedCategories = isResultArray(categories) ? categories.map(category => {
-        const remaining = category.allocated - category.spent;
-        const percentageUsed = category.allocated > 0 
-          ? Math.round((category.spent / category.allocated) * 100) 
-          : 0;
-          
-        return {
-          id: category.id,
-          category: category.category,
-          type: category.type,
-          subCategory: category.sub_category,
-          allocated: parseFloat(category.allocated),
-          spent: parseFloat(category.spent),
-          remaining,
-          percentageUsed
-        };
-      }) : [];
-
-      result.push({
-        id: budget.id,
-        month: budget.month,
-        year: budget.year,
-        totalAllocated: parseFloat(budget.total_allocated),
-        totalSpent: parseFloat(budget.total_spent),
-        categories: formattedCategories
-      });
+    
+    if (isResultArray(budgets)) {
+      for (const budget of budgets) {
+        const [categories] = await pool.query(`
+          SELECT 
+            id, category, type, sub_category, allocated, spent
+          FROM 
+            budget_categories
+          WHERE 
+            budget_id = ?
+        `, [budget.id]);
+  
+        // Calculate remaining and percentage for each category
+        const formattedCategories = isResultArray(categories) ? categories.map(category => {
+          const remaining = category.allocated - category.spent;
+          const percentageUsed = category.allocated > 0 
+            ? Math.round((category.spent / category.allocated) * 100) 
+            : 0;
+            
+          return {
+            id: category.id,
+            category: category.category,
+            type: category.type,
+            subCategory: category.sub_category,
+            allocated: parseFloat(category.allocated),
+            spent: parseFloat(category.spent),
+            remaining,
+            percentageUsed
+          };
+        }) : [];
+  
+        result.push({
+          id: budget.id,
+          month: budget.month,
+          year: budget.year,
+          totalAllocated: parseFloat(budget.total_allocated),
+          totalSpent: parseFloat(budget.total_spent),
+          categories: formattedCategories
+        });
+      }
     }
 
     res.json(result);
@@ -1432,7 +1442,12 @@ app.get('/api/reports/monthly', async (req, res) => {
         LIMIT 12`;
       
       const [expenseRows] = await pool.query(query, [familyId]);
-      res.json({ income: incomeRows, expenses: expenseRows });
+      
+      // Check if the results are arrays before sending them
+      const incomes = isResultArray(incomeRows) ? incomeRows : [];
+      const expenses = isResultArray(expenseRows) ? expenseRows : [];
+      
+      res.json({ income: incomes, expenses: expenses });
     } else {
       query += `
         GROUP BY YEAR(date), MONTH(date)
@@ -1452,7 +1467,12 @@ app.get('/api/reports/monthly', async (req, res) => {
         LIMIT 12`;
       
       const [expenseRows] = await pool.query(query);
-      res.json({ income: incomeRows, expenses: expenseRows });
+      
+      // Check if the results are arrays before sending them
+      const incomes = isResultArray(incomeRows) ? incomeRows : [];
+      const expenses = isResultArray(expenseRows) ? expenseRows : [];
+      
+      res.json({ income: incomes, expenses: expenses });
     }
   } catch (error) {
     console.error('Error fetching monthly reports:', error);
@@ -1477,12 +1497,20 @@ app.get('/api/reports/weekly', async (req, res) => {
                 GROUP BY DAYOFWEEK(date)
                 ORDER BY DAYOFWEEK(date)`;
       const [rows] = await pool.query(query, [familyId]);
-      res.json(rows);
+      
+      // Check if the result is an array before sending it
+      const result = isResultArray(rows) ? rows : [];
+      
+      res.json(result);
     } else {
       query += ` GROUP BY DAYOFWEEK(date)
                 ORDER BY DAYOFWEEK(date)`;
       const [rows] = await pool.query(query);
-      res.json(rows);
+      
+      // Check if the result is an array before sending it
+      const result = isResultArray(rows) ? rows : [];
+      
+      res.json(result);
     }
   } catch (error) {
     console.error('Error fetching weekly spending patterns:', error);
