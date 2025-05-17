@@ -17,7 +17,7 @@ const FamilyFilter: React.FC<FamilyFilterProps> = ({
 }) => {
   return (
     <Select 
-      value={selectedFamilyMember} 
+      value={selectedFamilyMember || "all-members"} 
       onValueChange={onFamilyMemberChange}
     >
       <SelectTrigger className="w-[180px] bg-fintrack-bg-dark border-fintrack-bg-dark">
@@ -27,7 +27,7 @@ const FamilyFilter: React.FC<FamilyFilterProps> = ({
       <SelectContent className="bg-fintrack-card-dark border-fintrack-bg-dark">
         <SelectItem value="all-members">All Members</SelectItem>
         {familyMembers.map((member) => (
-          <SelectItem key={member.id} value={member.id}>
+          <SelectItem key={member.id} value={member.id || `member-${member.name}`}>
             {member.name}
           </SelectItem>
         ))}

@@ -255,7 +255,7 @@ const Dashboard = () => {
   };
 
   const handleFamilyMemberChange = (value: string) => {
-    setSelectedFamilyMember(value);
+    setSelectedFamilyMember(value === "all-members" ? "" : value);
   };
 
   // Find family member name by ID
@@ -272,7 +272,7 @@ const Dashboard = () => {
           <h2 className="text-2xl font-bold">Dashboard</h2>
           
           <Select 
-            value={selectedFamilyMember} 
+            value={selectedFamilyMember || "all-members"} 
             onValueChange={handleFamilyMemberChange}
           >
             <SelectTrigger className="w-[180px] bg-fintrack-bg-dark border-fintrack-bg-dark">
@@ -280,9 +280,9 @@ const Dashboard = () => {
               <SelectValue placeholder="All Members" />
             </SelectTrigger>
             <SelectContent className="bg-fintrack-card-dark border-fintrack-bg-dark">
-              <SelectItem value="">All Members</SelectItem>
+              <SelectItem value="all-members">All Members</SelectItem>
               {familyMembers.map((member) => (
-                <SelectItem key={member.id} value={member.id}>
+                <SelectItem key={member.id} value={member.id || `member-${member.name}`}>
                   {member.name}
                 </SelectItem>
               ))}

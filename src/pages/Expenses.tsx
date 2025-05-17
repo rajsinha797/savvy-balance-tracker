@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -61,40 +60,6 @@ const ExpensesPage = () => {
     setSelectedFamilyMember(value === "all-members" ? "" : value);
   };
 
-  // Handle form submits
-  const handleAddExpense = () => {
-    if (newExpense.amount <= 0 || !newExpense.category) {
-      return;
-    }
-    addExpense(newExpense);
-    setNewExpense({ 
-      amount: 0, 
-      category: '', 
-      description: '', 
-      date: new Date().toISOString().split('T')[0],
-      family_member_id: newExpense.family_member_id
-    });
-    setIsDialogOpen(false);
-  };
-
-  const handleEditExpense = () => {
-    if (!editingExpense || editingExpense.amount <= 0 || !editingExpense.category) {
-      return;
-    }
-    
-    updateExpenseItem({
-      id: editingExpense.id,
-      expense: editingExpense
-    });
-    
-    setEditingExpense(null);
-    setIsDialogOpen(false);
-  };
-
-  const handleDeleteExpense = (id: string | number) => {
-    deleteExpenseItem(id);
-  };
-
   // Find family member name by ID
   const getFamilyMemberName = (id?: string) => {
     if (!id) return null;
@@ -123,7 +88,7 @@ const ExpensesPage = () => {
             <SelectContent className="bg-fintrack-card-dark border-fintrack-bg-dark">
               <SelectItem value="all-members">All Members</SelectItem>
               {familyMembers.map((member) => (
-                <SelectItem key={member.id} value={member.id}>
+                <SelectItem key={member.id} value={member.id || `member-${member.name}`}>
                   {member.name}
                 </SelectItem>
               ))}
