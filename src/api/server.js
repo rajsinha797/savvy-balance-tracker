@@ -76,16 +76,33 @@ app.get('/api/income/categories', async (req, res) => {
   }
 });
 
+// Get all income types
+app.get('/api/income/types', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM income_type');
+    res.json(rows);
+  } catch (error) {
+    console.error('Error fetching income types:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to fetch income types' });
+  }
+});
+
 // Get all incomes
 app.get('/api/income', async (req, res) => {
   try {
     const familyId = req.query.family_member_id;
     
     let query = `
-      SELECT i.income_id as id, i.amount, i.date, i.description, ic.name as category, 
+      SELECT i.income_id as id, i.amount, i.date, i.description, 
+             it.name as income_type_name,
+             ic.name as income_category_name,
+             isc.name as income_sub_category_name,
+             i.income_type_id, i.income_category_id, i.income_sub_category_id,
              fm.name as family_member, i.family_member_id
       FROM income i
-      JOIN income_category ic ON i.category_id = ic.category_id
+      LEFT JOIN income_type it ON i.income_type_id = it.id
+      LEFT JOIN income_category ic ON i.income_category_id = ic.id
+      LEFT JOIN income_sub_category isc ON i.income_sub_category_id = isc.id
       LEFT JOIN family_members fm ON i.family_member_id = fm.id
     `;
     
@@ -388,6 +405,90 @@ app.delete('/api/expenses/:id', async (req, res) => {
 
 // BUDGET API ENDPOINTS
 
+// Sync expenses with budget
+app.post('/api/budgets/sync-expenses', async (req, res) => {
+  try {
+    const { year, month } = req.body;
+    
+    if (!year || !month) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Year and month are required'
+      });
+    }
+
+    // Find the budget for this period
+    const [budgets] = await pool.query(
+      'SELECT id FROM budgets WHERE year = ? AND month = ?', 
+      [year, month]
+    );
+
+    if (budgets.length === 0) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'No budget found for this period'
+      });
+    }
+
+    const budgetId = budgets[0].id;
+
+    // Get all expense categories in this period
+    const [expenses] = await pool.query(
+      `SELECT category, type, sub_category, SUM(amount) as total
+       FROM expenses 
+       WHERE YEAR(date) = ? AND MONTH(date) = ?
+       GROUP BY category, type, sub_category`, 
+      [year, month]
+    );
+
+    // Update budget category spent amounts
+    for (const expense of expenses) {
+      // Find matching budget category
+      const [categories] = await pool.query(
+        `SELECT id, allocated, spent FROM budget_categories 
+         WHERE budget_id = ? AND category = ? AND 
+         (type IS NULL OR type = ?) AND
+         (sub_category IS NULL OR sub_category = ?)`,
+        [budgetId, expense.category, expense.type || null, expense.sub_category || null]
+      );
+
+      if (categories.length > 0) {
+        const category = categories[0];
+        
+        // Update the spent amount
+        await pool.query(
+          'UPDATE budget_categories SET spent = ? WHERE id = ?',
+          [expense.total, category.id]
+        );
+        
+        // Calculate spending difference to update budget total
+        const spentDiff = expense.total - category.spent;
+        
+        if (spentDiff !== 0) {
+          await pool.query(
+            'UPDATE budgets SET total_spent = total_spent + ? WHERE id = ?',
+            [spentDiff, budgetId]
+          );
+        }
+      }
+    }
+
+    res.json({
+      status: 'success',
+      success: true,
+      message: 'Budget synchronized with expenses successfully'
+    });
+  } catch (error) {
+    console.error('Error syncing expenses with budget:', error);
+    res.status(500).json({
+      status: 'error',
+      success: false,
+      message: 'Failed to sync expenses with budget',
+      error: error.message
+    });
+  }
+});
+
 // Get all budget periods
 app.get('/api/budgets', async (req, res) => {
   try {
@@ -416,6 +517,8 @@ app.get('/api/budgets', async (req, res) => {
           id VARCHAR(36) PRIMARY KEY,
           budget_id VARCHAR(36) NOT NULL,
           category VARCHAR(50) NOT NULL,
+          type VARCHAR(50),
+          sub_category VARCHAR(50),
           allocated DECIMAL(10,2) DEFAULT 0.00,
           spent DECIMAL(10,2) DEFAULT 0.00,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -439,7 +542,7 @@ app.get('/api/budgets', async (req, res) => {
     for (const budget of budgets) {
       const [categories] = await pool.query(`
         SELECT 
-          id, category, allocated, spent
+          id, category, type, sub_category, allocated, spent
         FROM 
           budget_categories
         WHERE 
@@ -456,6 +559,8 @@ app.get('/api/budgets', async (req, res) => {
         return {
           id: category.id,
           category: category.category,
+          type: category.type,
+          subCategory: category.sub_category,
           allocated: parseFloat(category.allocated),
           spent: parseFloat(category.spent),
           remaining,
@@ -511,7 +616,7 @@ app.get('/api/budgets/:id', async (req, res) => {
     // Get the categories for this budget
     const [categories] = await pool.query(`
       SELECT 
-        id, category, allocated, spent
+        id, category, type, sub_category, allocated, spent
       FROM 
         budget_categories
       WHERE 
@@ -528,6 +633,8 @@ app.get('/api/budgets/:id', async (req, res) => {
       return {
         id: category.id,
         category: category.category,
+        type: category.type,
+        subCategory: category.sub_category,
         allocated: parseFloat(category.allocated),
         spent: parseFloat(category.spent),
         remaining,
@@ -723,7 +830,7 @@ app.delete('/api/budgets/:id', async (req, res) => {
 app.post('/api/budgets/:budgetId/categories', async (req, res) => {
   try {
     const { budgetId } = req.params;
-    const { category, allocated } = req.body;
+    const { category, type, subCategory, allocated } = req.body;
     
     // Validate required fields
     if (!category || allocated === undefined) {
@@ -742,16 +849,16 @@ app.post('/api/budgets/:budgetId/categories', async (req, res) => {
       });
     }
 
-    // Check if this category already exists in this budget
+    // Check if this category already exists in this budget with the same type and subcategory
     const [categoryCheck] = await pool.query(
-      'SELECT id FROM budget_categories WHERE budget_id = ? AND category = ?', 
-      [budgetId, category]
+      'SELECT id FROM budget_categories WHERE budget_id = ? AND category = ? AND type <=> ? AND sub_category <=> ?', 
+      [budgetId, category, type || null, subCategory || null]
     );
     
     if (categoryCheck.length > 0) {
       return res.status(400).json({ 
         status: 'error', 
-        message: 'Category already exists in this budget' 
+        message: 'This category combination already exists in this budget' 
       });
     }
 
@@ -761,9 +868,9 @@ app.post('/api/budgets/:budgetId/categories', async (req, res) => {
 
     // Insert the new category
     await pool.query(`
-      INSERT INTO budget_categories (id, budget_id, category, allocated, spent)
-      VALUES (?, ?, ?, ?, 0)
-    `, [id, budgetId, category, allocated]);
+      INSERT INTO budget_categories (id, budget_id, category, type, sub_category, allocated, spent)
+      VALUES (?, ?, ?, ?, ?, ?, 0)
+    `, [id, budgetId, category, type || null, subCategory || null, allocated]);
 
     // Update the total_allocated in the budget
     await pool.query(`
@@ -779,6 +886,8 @@ app.post('/api/budgets/:budgetId/categories', async (req, res) => {
     res.status(201).json({
       id,
       category,
+      type,
+      subCategory,
       allocated: parseFloat(allocated),
       spent: 0,
       remaining,
@@ -798,7 +907,7 @@ app.post('/api/budgets/:budgetId/categories', async (req, res) => {
 app.put('/api/budgets/:budgetId/categories/:categoryId', async (req, res) => {
   try {
     const { budgetId, categoryId } = req.params;
-    const { allocated, spent } = req.body;
+    const { allocated, spent, type, subCategory } = req.body;
 
     // Check if the budget and category exist
     const [categoryCheck] = await pool.query(
@@ -816,6 +925,8 @@ app.put('/api/budgets/:budgetId/categories/:categoryId', async (req, res) => {
     const oldCategory = categoryCheck[0];
     const newAllocated = allocated !== undefined ? allocated : oldCategory.allocated;
     const newSpent = spent !== undefined ? spent : oldCategory.spent;
+    const newType = type !== undefined ? type : oldCategory.type;
+    const newSubCategory = subCategory !== undefined ? subCategory : oldCategory.sub_category;
 
     // Calculate the difference to update budget totals
     const allocatedDiff = newAllocated - oldCategory.allocated;
@@ -824,9 +935,9 @@ app.put('/api/budgets/:budgetId/categories/:categoryId', async (req, res) => {
     // Update the category
     await pool.query(`
       UPDATE budget_categories
-      SET allocated = ?, spent = ?
+      SET allocated = ?, spent = ?, type = ?, sub_category = ?
       WHERE id = ?
-    `, [newAllocated, newSpent, categoryId]);
+    `, [newAllocated, newSpent, newType, newSubCategory, categoryId]);
 
     // Update the budget totals
     await pool.query(`
@@ -846,6 +957,8 @@ app.put('/api/budgets/:budgetId/categories/:categoryId', async (req, res) => {
     res.json({
       id: categoryId,
       category: oldCategory.category,
+      type: newType,
+      subCategory: newSubCategory,
       allocated: parseFloat(newAllocated),
       spent: parseFloat(newSpent),
       remaining,
@@ -1261,7 +1374,11 @@ app.delete('/api/family/members/:id', async (req, res) => {
     res.json({ status: 'success', message: 'Family member deleted successfully' });
   } catch (error) {
     console.error('Error deleting family member:', error);
-    res.status(500).json({ status: 'error', message: 'Failed to delete family member' });
+    res.status(500).json({ 
+      status: 'error', 
+      message: 'Failed to delete family member',
+      error: error.message
+    });
   }
 });
 

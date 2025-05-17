@@ -119,10 +119,13 @@ export const deleteBudgetCategory = async (budgetPeriodId: string, categoryId: s
   }
 };
 
-// New function to sync expenses with budget
+// Improved function to sync expenses with budget
 export const syncExpensesWithBudget = async (year: string, month: string): Promise<void> => {
   try {
-    await axios.post(`${API_URL}/api/budgets/sync-expenses`, { year, month });
+    const response = await axios.post(`${API_URL}/api/budgets/sync-expenses`, { year, month });
+    if (!response.data?.success) {
+      throw new Error(response.data?.message || 'Failed to sync expenses');
+    }
   } catch (error) {
     console.error('Error syncing expenses with budget:', error);
     throw error;
