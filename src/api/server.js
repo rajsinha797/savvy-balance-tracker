@@ -1,3 +1,4 @@
+
 import express from 'express';
 import cors from 'cors';
 import mysql from 'mysql2/promise';
@@ -48,9 +49,21 @@ const isResultArray = (result) => {
 
 // Helper function to safely get UUID from query result
 const getUuidFromResult = (result) => {
+  // Handle case when result is an array with objects
   if (result && Array.isArray(result) && result.length > 0 && result[0] && 'id' in result[0]) {
     return result[0].id;
   }
+  
+  // Handle case when result itself is an object with id (some queries return this format)
+  if (result && typeof result === 'object' && 'id' in result) {
+    return result.id;
+  }
+  
+  // Handle OkPacket case that might have insertId
+  if (result && typeof result === 'object' && 'insertId' in result) {
+    return result.insertId.toString();
+  }
+  
   return null;
 };
 
@@ -907,7 +920,7 @@ app.post('/api/budgets/:budgetId/categories', async (req, res) => {
     // Generate UUID for the category
     const [uuidRows] = await pool.query('SELECT UUID() as id');
     
-    // Use the helper function to safely get UUID
+    // Use the enhanced helper function to safely get UUID
     const id = getUuidFromResult(uuidRows);
     if (!id) {
       return res.status(500).json({
