@@ -5,27 +5,27 @@ import { format, parse } from 'date-fns';
 const API_URL = 'http://localhost:3001';
 
 export interface Expense {
-  id: number;
+  id: string | number;
   amount: number;
   category: string;
   date: string;
   description: string;
   family_member?: string;
-  family_member_id?: number;
+  family_member_id?: string;
 }
 
-// Add ExpenseItem interface needed by the Expenses page
+// Update ExpenseItem to match Expense's id type
 export interface ExpenseItem extends Expense {
-  id: string | number;
+  // No need to redefine id since it's inherited
 }
 
 export interface ExpenseFormData {
-  id?: number;
+  id?: string | number;
   amount: number;
   category: string;
   date: string;
   description: string;
-  family_member_id?: number;
+  family_member_id?: string;
 }
 
 // Add the expected response interface
@@ -55,13 +55,10 @@ export const formatDateForDisplay = (dateString: string): string => {
   return formatDate(dateString);
 };
 
-export const getAllExpenses = async (familyMemberId?: number | string): Promise<Expense[]> => {
+export const getAllExpenses = async (familyMemberId?: string | number): Promise<Expense[]> => {
   try {
-    // Convert string to number if it's a string
-    const numericId = typeof familyMemberId === 'string' ? parseInt(familyMemberId) : familyMemberId;
-    
-    const url = numericId
-      ? `${API_URL}/api/expenses?family_member_id=${numericId}`
+    const url = familyMemberId
+      ? `${API_URL}/api/expenses?family_member_id=${familyMemberId}`
       : `${API_URL}/api/expenses`;
       
     const response = await axios.get(url);
@@ -78,7 +75,7 @@ export const getAllExpenses = async (familyMemberId?: number | string): Promise<
   }
 };
 
-export const getExpense = async (id: number): Promise<Expense> => {
+export const getExpense = async (id: string | number): Promise<Expense> => {
   try {
     const response = await axios.get(`${API_URL}/api/expenses/${id}`);
     return {
@@ -113,12 +110,9 @@ export const createExpense = async (expense: ExpenseFormData): Promise<ApiRespon
   }
 };
 
-export const updateExpense = async (id: number | string, expense: ExpenseFormData): Promise<ApiResponse> => {
+export const updateExpense = async (id: string | number, expense: ExpenseFormData): Promise<ApiResponse> => {
   try {
-    // Convert string to number if it's a string
-    const numericId = typeof id === 'string' ? parseInt(id) : id;
-    
-    const response = await axios.put(`${API_URL}/api/expenses/${numericId}`, expense);
+    const response = await axios.put(`${API_URL}/api/expenses/${id}`, expense);
     return {
       success: true,
       message: 'Expense updated successfully',
@@ -137,12 +131,9 @@ export const updateExpense = async (id: number | string, expense: ExpenseFormDat
   }
 };
 
-export const deleteExpense = async (id: number | string): Promise<ApiResponse> => {
+export const deleteExpense = async (id: string | number): Promise<ApiResponse> => {
   try {
-    // Convert string to number if it's a string
-    const numericId = typeof id === 'string' ? parseInt(id) : id;
-    
-    await axios.delete(`${API_URL}/api/expenses/${numericId}`);
+    await axios.delete(`${API_URL}/api/expenses/${id}`);
     return {
       success: true,
       message: 'Expense deleted successfully'

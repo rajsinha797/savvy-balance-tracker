@@ -9,7 +9,7 @@ interface IncomeListProps {
   incomes: IncomeItem[];
   isLoading: boolean;
   onEditIncome: (income: IncomeItem, categoryId: number) => void;
-  onDeleteIncome: (id: string) => void;
+  onDeleteIncome: (id: string | number) => void;
   categoryIdMap: Record<string, number>;
 }
 
@@ -93,7 +93,7 @@ const IncomeList: React.FC<IncomeListProps> = ({
                         <Button
                           size="icon"
                           variant="ghost"
-                          onClick={() => onDeleteIncome(income.id)}
+                          onClick={() => onDeleteIncome(String(income.id))}
                           className="h-8 w-8 text-fintrack-text-secondary"
                         >
                           <Trash2 className="h-4 w-4" />

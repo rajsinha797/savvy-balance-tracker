@@ -54,7 +54,7 @@ const IncomePage = () => {
     if (familyMembers.length > 0) {
       const defaultMember = familyMembers.find(member => member.is_default);
       if (defaultMember) {
-        setNewIncome(prev => ({ ...prev, family_member_id: defaultMember.id }));
+        setNewIncome(prev => ({ ...prev, family_member_id: String(defaultMember.id) }));
       }
     }
   }, [familyMembers]);
@@ -99,7 +99,7 @@ const IncomePage = () => {
     setIsDialogOpen(false);
   };
 
-  const handleDeleteIncome = async (id: string) => {
+  const handleDeleteIncome = async (id: string | number) => {
     deleteIncomeItem(id);
   };
 
@@ -135,7 +135,12 @@ const IncomePage = () => {
 
   const handleEditingIncomeChange = (field: string, value: string | number) => {
     if (editingIncome) {
-      setEditingIncome({ ...editingIncome, [field]: value });
+      setEditingIncome(prev => {
+        if (prev) {
+          return { ...prev, [field]: value };
+        }
+        return prev;
+      });
     }
   };
 

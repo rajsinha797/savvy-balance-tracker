@@ -96,7 +96,7 @@ export const useIncomeApi = (familyMemberId?: string) => {
   // Mutation for updating income
   const updateIncomeMutation = useMutation({
     mutationFn: ({id, incomeData}: {
-      id: string; 
+      id: string | number; 
       incomeData: {
         amount: number;
         category_id: number;
@@ -134,7 +134,7 @@ export const useIncomeApi = (familyMemberId?: string) => {
 
   // Mutation for deleting income
   const deleteIncomeMutation = useMutation({
-    mutationFn: (id: string) => deleteIncome(id),
+    mutationFn: (id: string | number) => deleteIncome(id),
     onSuccess: (result) => {
       if (result.success) {
         // Invalidate queries to refetch data

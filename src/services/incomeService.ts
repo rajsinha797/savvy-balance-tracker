@@ -5,27 +5,27 @@ import { format } from 'date-fns';
 const API_URL = 'http://localhost:3001';
 
 export interface Income {
-  id: number;
+  id: string | number;
   amount: number;
   category: string;
   date: string;
   description: string;
   family_member?: string;
-  family_member_id?: number;
+  family_member_id?: string;
 }
 
-// This interface is used by other components but was missing
+// Update IncomeItem to match Income's id type
 export interface IncomeItem extends Income {
-  id: string | number;
+  // No need to redefine id since it's inherited from Income
 }
 
 export interface IncomeFormData {
-  id?: number;
+  id?: string | number;
   amount: number;
   category_id: number;
   date: string;
   description: string;
-  family_member_id?: number;
+  family_member_id?: string;
 }
 
 export interface IncomeCategory {
@@ -70,7 +70,7 @@ export const getAllIncomeCategories = async (): Promise<IncomeCategory[]> => {
   }
 };
 
-export const getAllIncomes = async (familyMemberId?: number | string): Promise<Income[]> => {
+export const getAllIncomes = async (familyMemberId?: string | number): Promise<Income[]> => {
   try {
     const url = familyMemberId 
       ? `${API_URL}/api/income?family_member_id=${familyMemberId}` 
@@ -90,7 +90,7 @@ export const getAllIncomes = async (familyMemberId?: number | string): Promise<I
   }
 };
 
-export const getIncome = async (id: number): Promise<Income> => {
+export const getIncome = async (id: string | number): Promise<Income> => {
   try {
     const response = await axios.get(`${API_URL}/api/income/${id}`);
     return {
@@ -104,7 +104,7 @@ export const getIncome = async (id: number): Promise<Income> => {
   }
 };
 
-// Renamed function to match what useIncomeApi.ts is expecting
+// Primary function for adding income - this is what useIncomeApi.ts directly references
 export const addIncome = async (income: IncomeFormData): Promise<ApiResponse> => {
   try {
     const response = await axios.post(`${API_URL}/api/income`, income);
@@ -126,10 +126,9 @@ export const addIncome = async (income: IncomeFormData): Promise<ApiResponse> =>
 };
 
 // Updated to return ApiResponse to match what useIncomeApi.ts expects
-export const updateIncome = async (id: number | string, income: IncomeFormData): Promise<ApiResponse> => {
+export const updateIncome = async (id: string | number, income: IncomeFormData): Promise<ApiResponse> => {
   try {
-    const numericId = typeof id === 'string' ? parseInt(id) : id;
-    const response = await axios.put(`${API_URL}/api/income/${numericId}`, income);
+    const response = await axios.put(`${API_URL}/api/income/${id}`, income);
     return {
       success: true,
       message: 'Income updated successfully',
@@ -148,10 +147,9 @@ export const updateIncome = async (id: number | string, income: IncomeFormData):
 };
 
 // Updated to return ApiResponse to match what useIncomeApi.ts expects
-export const deleteIncome = async (id: number | string): Promise<ApiResponse> => {
+export const deleteIncome = async (id: string | number): Promise<ApiResponse> => {
   try {
-    const numericId = typeof id === 'string' ? parseInt(id) : id;
-    await axios.delete(`${API_URL}/api/income/${numericId}`);
+    await axios.delete(`${API_URL}/api/income/${id}`);
     return {
       success: true,
       message: 'Income deleted successfully'

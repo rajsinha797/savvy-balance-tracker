@@ -15,7 +15,7 @@ import {
   ExpenseCategory
 } from '@/services/expenseCategoryService';
 
-export const useExpenseApi = (familyMemberId?: number) => {
+export const useExpenseApi = (familyMemberId?: string) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -83,7 +83,7 @@ export const useExpenseApi = (familyMemberId?: number) => {
 
   // Update expense mutation
   const updateExpenseMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: ExpenseFormData }) => updateExpense(id, data),
+    mutationFn: ({ id, expense }: { id: string | number; expense: ExpenseFormData }) => updateExpense(id, expense),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
       toast({
@@ -103,7 +103,7 @@ export const useExpenseApi = (familyMemberId?: number) => {
 
   // Delete expense mutation
   const deleteExpenseMutation = useMutation({
-    mutationFn: (id: number) => deleteExpense(id),
+    mutationFn: (id: string | number) => deleteExpense(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
       toast({
@@ -123,7 +123,7 @@ export const useExpenseApi = (familyMemberId?: number) => {
 
   return {
     expenses,
-    expenseCategories,
+    expenseCategories, // Make sure this is named consistently
     isLoadingExpenses,
     isLoadingCategories,
     isErrorExpenses,

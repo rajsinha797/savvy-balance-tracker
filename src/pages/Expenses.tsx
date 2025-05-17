@@ -15,6 +15,7 @@ import { getAllFamilyMembers, FamilyMember } from '@/services/familyService';
 import { ExpenseItem, formatDateForDisplay } from '@/services/expenseService';
 
 const ExpensesPage = () => {
+  // Changed to string to fix type errors
   const [selectedFamilyMember, setSelectedFamilyMember] = useState<string>("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<ExpenseItem | null>(null);
@@ -36,7 +37,7 @@ const ExpensesPage = () => {
   // Get expenses with the API hook
   const { 
     expenses, 
-    categories,
+    expenseCategories, // changed from categories to expenseCategories to match the API hook response
     isLoadingExpenses,
     createExpense: addExpense,
     updateExpense: updateExpenseItem,
@@ -90,7 +91,7 @@ const ExpensesPage = () => {
     setIsDialogOpen(false);
   };
 
-  const handleDeleteExpense = (id: string) => {
+  const handleDeleteExpense = (id: string | number) => {
     deleteExpenseItem(id);
   };
 
