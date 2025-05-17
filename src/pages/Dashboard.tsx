@@ -8,6 +8,8 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import axios from 'axios';
 import { useToast } from "@/hooks/use-toast";
 import { getAllFamilyMembers, FamilyMember } from '@/services/familyService';
+import { useExpenseApi } from '@/hooks/useExpenseApi';
+import { useBudgetApi } from '@/hooks/useBudgetApi';
 
 const API_URL = 'http://localhost:3001';
 
@@ -24,28 +26,26 @@ const Dashboard = () => {
   });
   const [chartData, setChartData] = useState<any[]>([]);
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
-  const [budgetData, setBudgetData] = useState<any[]>([]);
-  const [upcomingBills, setUpcomingBills] = useState<any[]>([]);
-
+  
+  // Use our expense API hook directly
+  const { expenses } = useExpenseApi(selectedFamilyMember || undefined);
+  
+  // Use our budget API hook
+  const { budgetPeriods, activeBudget } = useBudgetApi();
+  
   // Mock for upcoming bills since we don't have a backend for this yet
   const mockBills = [
     { name: 'Rent', dueInDays: 5, amount: 1200 },
     { name: 'Internet', dueInDays: 12, amount: 89.99 },
     { name: 'Phone', dueInDays: 15, amount: 45 },
   ];
-
-  // Mock for budget data since we don't have a backend for this yet
-  const mockBudgetData = [
-    { category: 'Housing', allocated: 1500, spent: 1200 },
-    { category: 'Food', allocated: 800, spent: 650 },
-    { category: 'Transportation', allocated: 400, spent: 380 },
-    { category: 'Entertainment', allocated: 300, spent: 200 },
-    { category: 'Utilities', allocated: 500, spent: 480 },
-  ];
+  
+  const [upcomingBills, setUpcomingBills] = useState(mockBills);
+  const [budgetData, setBudgetData] = useState<any[]>([]);
 
   useEffect(() => {
     loadData();
-  }, [selectedFamilyMember]);
+  }, [selectedFamilyMember, expenses, budgetPeriods]);
 
   const loadData = async () => {
     setIsLoading(true);
@@ -60,19 +60,18 @@ const Dashboard = () => {
         : `${API_URL}/api/income`;
       
       const incomeResponse = await axios.get(incomeUrl);
-      const incomeData = incomeResponse.data;
+      const incomeData = incomeResponse.data || [];
       
-      // Load expense data
-      const expenseUrl = selectedFamilyMember 
-        ? `${API_URL}/api/expenses?family_member_id=${selectedFamilyMember}`
-        : `${API_URL}/api/expenses`;
+      // Use expenses from our hook
+      const expenseData = expenses || [];
       
-      const expenseResponse = await axios.get(expenseUrl);
-      const expenseData = expenseResponse.data;
-      
-      // Calculate summary
-      const totalIncome = incomeData.reduce((sum: number, item: any) => sum + item.amount, 0);
-      const totalExpenses = expenseData.reduce((sum: number, item: any) => sum + item.amount, 0);
+      // Calculate summary - ensure we're dealing with numbers
+      const totalIncome = Array.isArray(incomeData) ? 
+        incomeData.reduce((sum: number, item: any) => sum + parseFloat(item.amount || 0), 0) : 0;
+        
+      const totalExpenses = Array.isArray(expenseData) ? 
+        expenseData.reduce((sum: number, item: any) => sum + parseFloat(item.amount || 0), 0) : 0;
+        
       const totalBalance = totalIncome - totalExpenses;
       const savingsRate = totalIncome > 0 ? ((totalIncome - totalExpenses) / totalIncome) * 100 : 0;
       
@@ -88,41 +87,74 @@ const Dashboard = () => {
         ? `${API_URL}/api/reports/monthly?family_member_id=${selectedFamilyMember}`
         : `${API_URL}/api/reports/monthly`;
       
-      const monthlyResponse = await axios.get(monthlyDataUrl);
-      const monthlyData = monthlyResponse.data;
+      try {
+        const monthlyResponse = await axios.get(monthlyDataUrl);
+        const monthlyData = monthlyResponse.data;
+        
+        // Process monthly data for chart
+        const processedChartData = processMonthlyData(monthlyData);
+        setChartData(processedChartData);
+      } catch (error) {
+        console.error('Error loading monthly data:', error);
+        // Use fallback data for chart
+        setChartData([
+          { name: 'Jan', income: 5000, expenses: 3400 },
+          { name: 'Feb', income: 4500, expenses: 3200 },
+          { name: 'Mar', income: 6000, expenses: 4000 },
+          { name: 'Apr', income: 5500, expenses: 3800 },
+          { name: 'May', income: 5200, expenses: 3600 },
+          { name: 'Jun', income: 4800, expenses: 3300 },
+        ]);
+      }
       
-      // Process monthly data for chart
-      const processedChartData = processMonthlyData(monthlyData);
-      setChartData(processedChartData);
+      // Use budget data from our hook
+      if (budgetPeriods && budgetPeriods.length > 0) {
+        const currentBudget = budgetPeriods[0];
+        if (currentBudget && currentBudget.categories) {
+          setBudgetData(currentBudget.categories.map(cat => ({
+            category: cat.category,
+            allocated: cat.allocated,
+            spent: cat.spent
+          })));
+        } else {
+          setBudgetData([]); // Empty budget
+        }
+      } else {
+        // Use fallback mock data if no budget periods available
+        setBudgetData([
+          { category: 'Housing', allocated: 1500, spent: 1200 },
+          { category: 'Food', allocated: 800, spent: 650 },
+          { category: 'Transportation', allocated: 400, spent: 380 },
+          { category: 'Entertainment', allocated: 300, spent: 200 },
+          { category: 'Utilities', allocated: 500, spent: 480 },
+        ]);
+      }
       
       // Combine income and expenses for transactions list
       const combinedTransactions: Transaction[] = [
-        ...incomeData.map((item: any) => ({
+        ...(Array.isArray(incomeData) ? incomeData.map((item: any) => ({
           id: item.id,
           type: 'income',
-          amount: item.amount,
+          amount: parseFloat(item.amount || 0),
           category: item.category,
           description: item.description,
           date: item.date,
           family_member: item.family_member,
-        })),
-        ...expenseData.map((item: any) => ({
+        })) : []),
+        ...(Array.isArray(expenseData) ? expenseData.map((item: any) => ({
           id: item.id,
           type: 'expense',
-          amount: item.amount,
+          amount: parseFloat(item.amount || 0),
           category: item.category,
           description: item.description,
           date: item.date,
           family_member: item.family_member,
-        }))
+        })) : [])
       ];
       
       // Sort by date (most recent first) and take top 5
       combinedTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       setRecentTransactions(combinedTransactions.slice(0, 5));
-      
-      // Set budget data (using mock for now)
-      setBudgetData(mockBudgetData);
       
       // Set upcoming bills (using mock for now)
       setUpcomingBills(mockBills);
@@ -144,14 +176,31 @@ const Dashboard = () => {
         { name: 'Jun', income: 4800, expenses: 3300 },
       ]);
       
-      setBudgetData(mockBudgetData);
-      setUpcomingBills(mockBills);
+      setBudgetData([
+        { category: 'Housing', allocated: 1500, spent: 1200 },
+        { category: 'Food', allocated: 800, spent: 650 },
+        { category: 'Transportation', allocated: 400, spent: 380 },
+        { category: 'Entertainment', allocated: 300, spent: 200 },
+        { category: 'Utilities', allocated: 500, spent: 480 },
+      ]);
     } finally {
       setIsLoading(false);
     }
   };
 
   const processMonthlyData = (data: any) => {
+    // Handle case when data is undefined or doesn't have expected structure
+    if (!data || !data.income || !data.expenses) {
+      return [
+        { name: 'Jan', income: 5000, expenses: 3400 },
+        { name: 'Feb', income: 4500, expenses: 3200 },
+        { name: 'Mar', income: 6000, expenses: 4000 },
+        { name: 'Apr', income: 5500, expenses: 3800 },
+        { name: 'May', income: 5200, expenses: 3600 },
+        { name: 'Jun', income: 4800, expenses: 3300 },
+      ];
+    }
+    
     const { income = [], expenses = [] } = data;
     const months: Record<string, { name: string; income: number; expenses: number }> = {};
     
@@ -233,7 +282,7 @@ const Dashboard = () => {
               <SelectValue placeholder="All Members" />
             </SelectTrigger>
             <SelectContent className="bg-fintrack-card-dark border-fintrack-bg-dark">
-              <SelectItem value="all-members">All Members</SelectItem>
+              <SelectItem value="">All Members</SelectItem>
               {familyMembers.map((member) => (
                 <SelectItem key={member.id} value={member.id}>
                   {member.name}
@@ -427,6 +476,12 @@ const Dashboard = () => {
                 </div>
               );
             })}
+            
+            {budgetData.length === 0 && (
+              <div className="text-center py-4 text-fintrack-text-secondary">
+                No budget data available. Create a budget to start tracking your spending.
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

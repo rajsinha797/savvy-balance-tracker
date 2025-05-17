@@ -91,7 +91,12 @@ export const getExpense = async (id: string | number): Promise<Expense> => {
 
 export const createExpense = async (expense: ExpenseFormData): Promise<ApiResponse> => {
   try {
-    const response = await axios.post(`${API_URL}/api/expenses`, expense);
+    // When creating an expense, also update the budget
+    const response = await axios.post(`${API_URL}/api/expenses`, {
+      ...expense,
+      updateBudget: true // Add flag to update budget automatically
+    });
+    
     return {
       success: true,
       message: 'Expense created successfully',
@@ -112,7 +117,12 @@ export const createExpense = async (expense: ExpenseFormData): Promise<ApiRespon
 
 export const updateExpense = async (id: string | number, expense: ExpenseFormData): Promise<ApiResponse> => {
   try {
-    const response = await axios.put(`${API_URL}/api/expenses/${id}`, expense);
+    // When updating an expense, also update the budget
+    const response = await axios.put(`${API_URL}/api/expenses/${id}`, {
+      ...expense,
+      updateBudget: true // Add flag to update budget automatically
+    });
+    
     return {
       success: true,
       message: 'Expense updated successfully',
@@ -133,7 +143,9 @@ export const updateExpense = async (id: string | number, expense: ExpenseFormDat
 
 export const deleteExpense = async (id: string | number): Promise<ApiResponse> => {
   try {
-    await axios.delete(`${API_URL}/api/expenses/${id}`);
+    // When deleting an expense, also update the budget
+    await axios.delete(`${API_URL}/api/expenses/${id}?updateBudget=true`);
+    
     return {
       success: true,
       message: 'Expense deleted successfully'
@@ -144,5 +156,21 @@ export const deleteExpense = async (id: string | number): Promise<ApiResponse> =
       success: false,
       message: 'Failed to delete expense'
     };
+  }
+};
+
+// New function to get expenses by budget period
+export const getExpensesByBudgetPeriod = async (year: string, month: string): Promise<Expense[]> => {
+  try {
+    const response = await axios.get(`${API_URL}/api/expenses/budget?year=${year}&month=${month}`);
+    
+    return response.data.map((expense: any) => ({
+      ...expense,
+      date: formatDate(expense.date),
+      amount: parseFloat(expense.amount)
+    }));
+  } catch (error) {
+    console.error('Error fetching expenses by budget period:', error);
+    throw error;
   }
 };

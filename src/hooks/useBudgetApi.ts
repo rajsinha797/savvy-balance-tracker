@@ -10,6 +10,7 @@ import {
   addBudgetCategory,
   updateBudgetCategory,
   deleteBudgetCategory,
+  syncExpensesWithBudget,
   BudgetPeriod,
   BudgetCategory
 } from '@/services/budgetService';
@@ -21,7 +22,8 @@ export const useBudgetApi = (activeBudgetId?: string) => {
   // Query for all budget periods
   const { 
     data: budgetPeriods = [],
-    isLoading: isLoadingPeriods
+    isLoading: isLoadingPeriods,
+    refetch: refetchBudgetPeriods
   } = useQuery({
     queryKey: ['budgetPeriods'],
     queryFn: getAllBudgetPeriods,
@@ -40,7 +42,8 @@ export const useBudgetApi = (activeBudgetId?: string) => {
   // Query for specific budget period if ID is provided
   const {
     data: activeBudget,
-    isLoading: isLoadingActiveBudget
+    isLoading: isLoadingActiveBudget,
+    refetch: refetchActiveBudget
   } = useQuery({
     queryKey: ['budget', activeBudgetId],
     queryFn: () => getBudgetPeriod(activeBudgetId!),
@@ -127,6 +130,7 @@ export const useBudgetApi = (activeBudgetId?: string) => {
     }) => addBudgetCategory(budgetId, category),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['budget', activeBudgetId] });
+      queryClient.invalidateQueries({ queryKey: ['budgetPeriods'] });
       toast({
         title: "Success",
         description: "Budget category added successfully",
@@ -155,6 +159,7 @@ export const useBudgetApi = (activeBudgetId?: string) => {
     }) => updateBudgetCategory(budgetId, categoryId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['budget', activeBudgetId] });
+      queryClient.invalidateQueries({ queryKey: ['budgetPeriods'] });
       toast({
         title: "Success",
         description: "Budget category updated successfully",
@@ -176,6 +181,7 @@ export const useBudgetApi = (activeBudgetId?: string) => {
       deleteBudgetCategory(budgetId, categoryId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['budget', activeBudgetId] });
+      queryClient.invalidateQueries({ queryKey: ['budgetPeriods'] });
       toast({
         title: "Success",
         description: "Budget category deleted successfully",
@@ -191,16 +197,48 @@ export const useBudgetApi = (activeBudgetId?: string) => {
     }
   });
 
+  // Sync expenses with budget
+  const syncExpensesMutation = useMutation({
+    mutationFn: ({ year, month }: { year: string, month: string }) => 
+      syncExpensesWithBudget(year, month),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['budgetPeriods'] });
+      queryClient.invalidateQueries({ queryKey: ['budget', activeBudgetId] });
+      toast({
+        title: "Success",
+        description: "Budget updated with latest expenses",
+      });
+    },
+    onError: (error) => {
+      console.error('Error syncing expenses with budget:', error);
+      toast({
+        title: "Error",
+        description: "Failed to sync expenses with budget. Please try again.",
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Function to refresh budget data
+  const refreshBudgetData = () => {
+    refetchBudgetPeriods();
+    if (activeBudgetId) {
+      refetchActiveBudget();
+    }
+  };
+
   return {
     budgetPeriods,
     activeBudget,
     isLoadingPeriods,
     isLoadingActiveBudget,
+    refreshBudgetData,
     createBudget: createBudgetMutation.mutate,
     updateBudget: updateBudgetMutation.mutate,
     deleteBudget: deleteBudgetMutation.mutate,
     addCategory: addCategoryMutation.mutate,
     updateCategory: updateCategoryMutation.mutate,
-    deleteCategory: deleteCategoryMutation.mutate
+    deleteCategory: deleteCategoryMutation.mutate,
+    syncExpenses: syncExpensesMutation.mutate
   };
 };

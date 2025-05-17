@@ -23,8 +23,8 @@ export interface BudgetPeriod {
 
 export const getAllBudgetPeriods = async (): Promise<BudgetPeriod[]> => {
   try {
-    // Using the correct endpoint
-    const response = await axios.get(`${API_URL}/api/budgets`);
+    // Using the correct endpoint with expense integration
+    const response = await axios.get(`${API_URL}/api/budgets?includeExpenses=true`);
     return response.data;
   } catch (error) {
     console.error('Error fetching budget periods:', error);
@@ -34,8 +34,8 @@ export const getAllBudgetPeriods = async (): Promise<BudgetPeriod[]> => {
 
 export const getBudgetPeriod = async (id: string): Promise<BudgetPeriod> => {
   try {
-    // Using the correct endpoint
-    const response = await axios.get(`${API_URL}/api/budgets/${id}`);
+    // Using the correct endpoint with expense integration
+    const response = await axios.get(`${API_URL}/api/budgets/${id}?includeExpenses=true`);
     return response.data;
   } catch (error) {
     console.error('Error fetching budget period:', error);
@@ -113,6 +113,16 @@ export const deleteBudgetCategory = async (budgetPeriodId: string, categoryId: s
     await axios.delete(`${API_URL}/api/budgets/${budgetPeriodId}/categories/${categoryId}`);
   } catch (error) {
     console.error('Error deleting budget category:', error);
+    throw error;
+  }
+};
+
+// New function to sync expenses with budget
+export const syncExpensesWithBudget = async (year: string, month: string): Promise<void> => {
+  try {
+    await axios.post(`${API_URL}/api/budgets/sync-expenses`, { year, month });
+  } catch (error) {
+    console.error('Error syncing expenses with budget:', error);
     throw error;
   }
 };

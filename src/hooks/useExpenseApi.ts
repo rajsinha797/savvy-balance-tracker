@@ -63,9 +63,15 @@ export const useExpenseApi = (familyMemberId?: string) => {
 
   // Create expense mutation
   const createExpenseMutation = useMutation({
-    mutationFn: (data: ExpenseFormData) => createExpense(data),
+    mutationFn: (data: ExpenseFormData) => {
+      // Invalidate budget queries as well when creating an expense
+      return createExpense(data);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      // Also invalidate budget queries to refresh the budget data
+      queryClient.invalidateQueries({ queryKey: ['budgetPeriods'] });
+      queryClient.invalidateQueries({ queryKey: ['budget'] });
       toast({
         title: "Success",
         description: "Expense added successfully",
@@ -86,6 +92,9 @@ export const useExpenseApi = (familyMemberId?: string) => {
     mutationFn: ({ id, expense }: { id: string | number; expense: ExpenseFormData }) => updateExpense(id, expense),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      // Also invalidate budget queries to refresh the budget data
+      queryClient.invalidateQueries({ queryKey: ['budgetPeriods'] });
+      queryClient.invalidateQueries({ queryKey: ['budget'] });
       toast({
         title: "Success",
         description: "Expense updated successfully",
@@ -106,6 +115,9 @@ export const useExpenseApi = (familyMemberId?: string) => {
     mutationFn: (id: string | number) => deleteExpense(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      // Also invalidate budget queries to refresh the budget data
+      queryClient.invalidateQueries({ queryKey: ['budgetPeriods'] });
+      queryClient.invalidateQueries({ queryKey: ['budget'] });
       toast({
         title: "Success",
         description: "Expense deleted successfully",
@@ -123,7 +135,7 @@ export const useExpenseApi = (familyMemberId?: string) => {
 
   return {
     expenses,
-    expenseCategories, // Make sure this is named consistently
+    expenseCategories,
     isLoadingExpenses,
     isLoadingCategories,
     isErrorExpenses,
