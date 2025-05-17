@@ -1,4 +1,3 @@
-
 import express from 'express';
 import cors from 'cors';
 import mysql from 'mysql2/promise';
@@ -8,6 +7,7 @@ import { ParsedQs } from 'qs';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { isResultArray, getSafeRows } from './utils/queryHelpers.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -61,7 +61,8 @@ app.get('/api/docs', (req: Request, res: Response) => {
 // Test database connection
 app.get('/api/test', async (req: Request, res: Response) => {
   try {
-    const [rows] = await pool.query('SELECT 1 as test');
+    const [result] = await pool.query('SELECT 1 as test');
+    const rows = isResultArray(result) ? result : [];
     res.json({ status: 'success', message: 'Database connected successfully', data: rows });
   } catch (error) {
     console.error('Database connection error:', error);
@@ -83,7 +84,8 @@ app.get('/api/income/categories', async (req: Request, res: Response) => {
 // NEW API: Get all income types
 app.get('/api/income/types', async (req: Request, res: Response) => {
   try {
-    const [rows] = await pool.query('SELECT id, name FROM income_type');
+    const [result] = await pool.query('SELECT id, name FROM income_type');
+    const rows = isResultArray(result) ? result : [];
     res.json(rows);
   } catch (error) {
     console.error('Error fetching income types:', error);
@@ -95,7 +97,8 @@ app.get('/api/income/types', async (req: Request, res: Response) => {
 app.get('/api/income/categories/by-type/:typeId', async (req: Request, res: Response) => {
   try {
     const { typeId } = req.params;
-    const [rows] = await pool.query('SELECT id, income_type_id, name FROM income_category WHERE income_type_id = ?', [typeId]);
+    const [result] = await pool.query('SELECT id, income_type_id, name FROM income_category WHERE income_type_id = ?', [typeId]);
+    const rows = isResultArray(result) ? result : [];
     res.json(rows);
   } catch (error) {
     console.error('Error fetching income categories by type:', error);
@@ -107,7 +110,8 @@ app.get('/api/income/categories/by-type/:typeId', async (req: Request, res: Resp
 app.get('/api/income/subcategories/by-category/:categoryId', async (req: Request, res: Response) => {
   try {
     const { categoryId } = req.params;
-    const [rows] = await pool.query('SELECT id, income_category_id, name FROM income_sub_category WHERE income_category_id = ?', [categoryId]);
+    const [result] = await pool.query('SELECT id, income_category_id, name FROM income_sub_category WHERE income_category_id = ?', [categoryId]);
+    const rows = isResultArray(result) ? result : [];
     res.json(rows);
   } catch (error) {
     console.error('Error fetching income subcategories by category:', error);
@@ -1509,12 +1513,17 @@ app.get('/api/reports/monthly', async (req: Request, res: Response) => {
       FROM income
     `;
     
+    let incomeRows, expenseRows;
+    
     if (familyId) {
       query += ` WHERE family_member_id = ?
                 GROUP BY YEAR(date), MONTH(date)
                 ORDER BY YEAR(date) DESC, MONTH(date) DESC
                 LIMIT 12`;
-      const [incomeRows] = await pool.query(query, [familyId]);
+      const [incomeResult] = await pool.query(query, [familyId]);
+      
+      // Fix: Check if the result is an array before assigning
+      incomeRows = isResultArray(incomeResult) ? incomeResult : [];
       
       query = `
         SELECT 
@@ -1527,7 +1536,10 @@ app.get('/api/reports/monthly', async (req: Request, res: Response) => {
         ORDER BY YEAR(date) DESC, MONTH(date) DESC
         LIMIT 12`;
       
-      const [expenseRows] = await pool.query(query, [familyId]);
+      const [expenseResult] = await pool.query(query, [familyId]);
+      // Fix: Check if the result is an array before assigning
+      expenseRows = isResultArray(expenseResult) ? expenseResult : [];
+      
       res.json({ income: incomeRows, expenses: expenseRows });
     } else {
       query += `
@@ -1535,7 +1547,9 @@ app.get('/api/reports/monthly', async (req: Request, res: Response) => {
         ORDER BY YEAR(date) DESC, MONTH(date) DESC
         LIMIT 12`;
       
-      const [incomeRows] = await pool.query(query);
+      const [incomeResult] = await pool.query(query);
+      // Fix: Check if the result is an array before assigning
+      incomeRows = isResultArray(incomeResult) ? incomeResult : [];
       
       query = `
         SELECT 
@@ -1547,7 +1561,10 @@ app.get('/api/reports/monthly', async (req: Request, res: Response) => {
         ORDER BY YEAR(date) DESC, MONTH(date) DESC
         LIMIT 12`;
       
-      const [expenseRows] = await pool.query(query);
+      const [expenseResult] = await pool.query(query);
+      // Fix: Check if the result is an array before assigning
+      expenseRows = isResultArray(expenseResult) ? expenseResult : [];
+      
       res.json({ income: incomeRows, expenses: expenseRows });
     }
   } catch (error) {
@@ -1568,16 +1585,22 @@ app.get('/api/reports/weekly', async (req: Request, res: Response) => {
       FROM expenses
     `;
     
+    let rows;
+    
     if (familyId) {
       query += ` WHERE family_member_id = ?
                 GROUP BY DAYOFWEEK(date)
                 ORDER BY DAYOFWEEK(date)`;
-      const [rows] = await pool.query(query, [familyId]);
+      const [result] = await pool.query(query, [familyId]);
+      // Fix: Check if the result is an array before assigning
+      rows = isResultArray(result) ? result : [];
       res.json(rows);
     } else {
       query += ` GROUP BY DAYOFWEEK(date)
                 ORDER BY DAYOFWEEK(date)`;
-      const [rows] = await pool.query(query);
+      const [result] = await pool.query(query);
+      // Fix: Check if the result is an array before assigning
+      rows = isResultArray(result) ? result : [];
       res.json(rows);
     }
   } catch (error) {

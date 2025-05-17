@@ -41,3 +41,24 @@ export const getUuidFromResult = (result) => {
   
   return null;
 };
+
+/**
+ * Safe function to check if a query returned rows and get them
+ * This helps with TypeScript compatibility for mysql2 results
+ */
+export const getSafeRows = (result) => {
+  // If result is directly an array (most common case)
+  if (Array.isArray(result)) {
+    return result;
+  }
+  
+  // Handle the [rows, fields] format from mysql2
+  if (Array.isArray(result) && result.length > 0) {
+    if (Array.isArray(result[0])) {
+      return result[0];
+    }
+  }
+  
+  // Return empty array as fallback
+  return [];
+};
