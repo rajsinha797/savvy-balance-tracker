@@ -691,9 +691,8 @@ app.post('/api/budgets', async (req, res) => {
     // Generate UUID for the budget
     const [uuidResult] = await pool.query('SELECT UUID() as id');
     
-    // This is where the error is occurring - line 922
-    // We need to check if uuidResult is an array
-    if (!isResultArray(uuidResult) || uuidResult.length === 0) {
+    // Check if uuidResult is valid and has the expected format
+    if (!uuidResult || typeof uuidResult !== 'object' || !('id' in uuidResult[0])) {
       return res.status(500).json({
         status: 'error',
         message: 'Failed to generate UUID'
@@ -901,8 +900,8 @@ app.post('/api/budgets/:budgetId/categories', async (req, res) => {
     // Generate UUID for the category
     const [uuidResult] = await pool.query('SELECT UUID() as id');
     
-    // Check if uuidResult is valid
-    if (!isResultArray(uuidResult) || uuidResult.length === 0) {
+    // Check if uuidResult is valid and has the expected format
+    if (!uuidResult || typeof uuidResult !== 'object' || !('id' in uuidResult[0])) {
       return res.status(500).json({
         status: 'error',
         message: 'Failed to generate UUID'
