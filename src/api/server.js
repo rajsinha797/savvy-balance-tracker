@@ -42,6 +42,11 @@ const errorHandler = (err, req, res, next) => {
   });
 };
 
+// Helper function to check if a query result is an array
+const isResultArray = (result) => {
+  return Array.isArray(result) && result.length !== undefined;
+};
+
 // API Documentation endpoint
 app.get('/api/docs', (req, res) => {
   const docsPath = path.join(__dirname, 'api-docs.md');
@@ -551,7 +556,7 @@ app.get('/api/budgets', async (req, res) => {
       `, [budget.id]);
 
       // Calculate remaining and percentage for each category
-      const formattedCategories = categories.map(category => {
+      const formattedCategories = isResultArray(categories) ? categories.map(category => {
         const remaining = category.allocated - category.spent;
         const percentageUsed = category.allocated > 0 
           ? Math.round((category.spent / category.allocated) * 100) 
@@ -567,7 +572,7 @@ app.get('/api/budgets', async (req, res) => {
           remaining,
           percentageUsed
         };
-      });
+      }) : [];
 
       result.push({
         id: budget.id,
@@ -605,7 +610,7 @@ app.get('/api/budgets/:id', async (req, res) => {
         id = ?
     `, [id]);
 
-    if (budgets.length === 0) {
+    if (!isResultArray(budgets) || budgets.length === 0) {
       return res.status(404).json({ 
         status: 'error', 
         message: 'Budget period not found' 
@@ -625,7 +630,7 @@ app.get('/api/budgets/:id', async (req, res) => {
     `, [id]);
 
     // Calculate remaining and percentage for each category
-    const formattedCategories = categories.map(category => {
+    const formattedCategories = isResultArray(categories) ? categories.map(category => {
       const remaining = category.allocated - category.spent;
       const percentageUsed = category.allocated > 0 
         ? Math.round((category.spent / category.allocated) * 100) 
@@ -641,7 +646,7 @@ app.get('/api/budgets/:id', async (req, res) => {
         remaining,
         percentageUsed
       };
-    });
+    }) : [];
 
     res.json({
       id: budget.id,
@@ -711,7 +716,7 @@ app.put('/api/budgets/:id', async (req, res) => {
 
     // Check if the budget exists
     const [budgetCheck] = await pool.query('SELECT id FROM budgets WHERE id = ?', [id]);
-    if (budgetCheck.length === 0) {
+    if (!isResultArray(budgetCheck) || budgetCheck.length === 0) {
       return res.status(404).json({ 
         status: 'error', 
         message: 'Budget period not found' 
@@ -760,7 +765,7 @@ app.put('/api/budgets/:id', async (req, res) => {
     const [budgets] = await pool.query('SELECT * FROM budgets WHERE id = ?', [id]);
     
     // Fixed: Ensure we're properly handling the array result, not trying to access properties of OkPacket
-    if (!budgets || !Array.isArray(budgets) || budgets.length === 0) {
+    if (!isResultArray(budgets) || budgets.length === 0) {
       return res.status(500).json({ 
         status: 'error', 
         message: 'Failed to fetch updated budget data' 
@@ -770,7 +775,7 @@ app.put('/api/budgets/:id', async (req, res) => {
     const [categories] = await pool.query('SELECT * FROM budget_categories WHERE budget_id = ?', [id]);
 
     // Calculate remaining and percentage for each category
-    const formattedCategories = Array.isArray(categories) ? categories.map(category => {
+    const formattedCategories = isResultArray(categories) ? categories.map(category => {
       const remaining = category.allocated - category.spent;
       const percentageUsed = category.allocated > 0 
         ? Math.round((category.spent / category.allocated) * 100) 
@@ -814,7 +819,7 @@ app.delete('/api/budgets/:id', async (req, res) => {
 
     // Check if the budget exists
     const [budgetCheck] = await pool.query('SELECT id FROM budgets WHERE id = ?', [id]);
-    if (budgetCheck.length === 0) {
+    if (!isResultArray(budgetCheck) || budgetCheck.length === 0) {
       return res.status(404).json({ 
         status: 'error', 
         message: 'Budget period not found' 
@@ -854,7 +859,7 @@ app.post('/api/budgets/:budgetId/categories', async (req, res) => {
 
     // Check if the budget exists
     const [budgetCheck] = await pool.query('SELECT * FROM budgets WHERE id = ?', [budgetId]);
-    if (budgetCheck.length === 0) {
+    if (!isResultArray(budgetCheck) || budgetCheck.length === 0) {
       return res.status(404).json({ 
         status: 'error', 
         message: 'Budget period not found' 
@@ -867,7 +872,7 @@ app.post('/api/budgets/:budgetId/categories', async (req, res) => {
       [budgetId, category, type || null, subCategory || null]
     );
     
-    if (categoryCheck.length > 0) {
+    if (isResultArray(categoryCheck) && categoryCheck.length > 0) {
       return res.status(400).json({ 
         status: 'error', 
         message: 'This category combination already exists in this budget' 
@@ -927,7 +932,7 @@ app.put('/api/budgets/:budgetId/categories/:categoryId', async (req, res) => {
       [categoryId, budgetId]
     );
     
-    if (categoryCheck.length === 0) {
+    if (!isResultArray(categoryCheck) || categoryCheck.length === 0) {
       return res.status(404).json({ 
         status: 'error', 
         message: 'Budget category not found' 
@@ -997,7 +1002,7 @@ app.delete('/api/budgets/:budgetId/categories/:categoryId', async (req, res) => 
       [categoryId, budgetId]
     );
     
-    if (categoryCheck.length === 0) {
+    if (!isResultArray(categoryCheck) || categoryCheck.length === 0) {
       return res.status(404).json({ 
         status: 'error', 
         message: 'Budget category not found' 
@@ -1096,7 +1101,7 @@ app.get('/api/families/:id', async (req, res) => {
     const query = `SELECT family_id, name FROM family WHERE family_id = ?`;
     const [rows] = await pool.query(query, [id]);
     
-    if (Array.isArray(rows) && rows.length === 0) {
+    if (!isResultArray(rows) || rows.length === 0) {
       res.status(404).json({ status: 'error', message: 'Family not found' });
       return;
     }
@@ -1168,7 +1173,7 @@ app.delete('/api/families/:id', async (req, res) => {
     // Check if family has members first
     const [memberCheck] = await pool.query('SELECT COUNT(*) as memberCount FROM family_members WHERE family_id = ?', [id]);
     
-    if (Array.isArray(memberCheck) && memberCheck[0].memberCount > 0) {
+    if (isResultArray(memberCheck) && memberCheck[0].memberCount > 0) {
       res.status(400).json({ 
         status: 'error', 
         message: 'Cannot delete family with existing members. Remove members first.' 
@@ -1355,7 +1360,7 @@ app.delete('/api/family/members/:id', async (req, res) => {
     // Check if this is a default member
     const [memberCheck] = await pool.query('SELECT is_default, family_id FROM family_members WHERE id = ?', [id]);
     
-    if (Array.isArray(memberCheck) && memberCheck.length === 0) {
+    if (!isResultArray(memberCheck) || memberCheck.length === 0) {
       res.status(404).json({ status: 'error', message: 'Family member not found' });
       return;
     }
