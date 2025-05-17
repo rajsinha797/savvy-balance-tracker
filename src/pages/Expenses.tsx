@@ -59,6 +59,41 @@ const ExpensesPage = () => {
   const handleFamilyMemberChange = (value: string) => {
     setSelectedFamilyMember(value === "all-members" ? "" : value);
   };
+  
+  // Re-add the missing handler functions
+  // Handle form submits
+  const handleAddExpense = () => {
+    if (newExpense.amount <= 0 || !newExpense.category) {
+      return;
+    }
+    addExpense(newExpense);
+    setNewExpense({ 
+      amount: 0, 
+      category: '', 
+      description: '', 
+      date: new Date().toISOString().split('T')[0],
+      family_member_id: newExpense.family_member_id
+    });
+    setIsDialogOpen(false);
+  };
+
+  const handleEditExpense = () => {
+    if (!editingExpense || editingExpense.amount <= 0 || !editingExpense.category) {
+      return;
+    }
+    
+    updateExpenseItem({
+      id: editingExpense.id,
+      expense: editingExpense
+    });
+    
+    setEditingExpense(null);
+    setIsDialogOpen(false);
+  };
+
+  const handleDeleteExpense = (id: string | number) => {
+    deleteExpenseItem(id);
+  };
 
   // Find family member name by ID
   const getFamilyMemberName = (id?: string) => {
@@ -169,7 +204,7 @@ const ExpensesPage = () => {
                     </SelectTrigger>
                     <SelectContent className="bg-fintrack-card-dark border-fintrack-bg-dark">
                       {familyMembers.map((member) => (
-                        <SelectItem key={member.id} value={String(member.id)}>
+                        <SelectItem key={member.id} value={String(member.id || `member-${member.name}`)}>
                           {member.name} ({member.relationship})
                         </SelectItem>
                       ))}
