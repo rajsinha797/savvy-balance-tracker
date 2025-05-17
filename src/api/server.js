@@ -1096,6 +1096,11 @@ app.get('/api/families', async (req, res) => {
   try {
     const query = `SELECT family_id, name FROM family`;
     const [rows] = await pool.query(query);
+    
+    if (!isResultArray(rows)) {
+      return res.json([]);
+    }
+    
     res.json(rows);
   } catch (error) {
     console.error('Error fetching families:', error);
@@ -1219,6 +1224,11 @@ app.get('/api/family/members', async (req, res) => {
     `;
     
     const [rows] = await pool.query(query, [familyId]);
+    
+    if (!isResultArray(rows)) {
+      return res.json([]);
+    }
+    
     res.json(rows);
   } catch (error) {
     console.error('Error fetching family members:', error);
