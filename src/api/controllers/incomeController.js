@@ -1,6 +1,5 @@
-
 import pool from '../db/db.js';
-import { isResultArray, getSafeRows, handleOkPacket } from '../utils/queryHelpers.js';
+import { getSafeRows } from '../utils/queryHelpers.js';
 
 // Get all income categories - legacy function but updated to use new table
 export const getAllIncomeCategories = async (req, res) => {
@@ -111,12 +110,12 @@ export const createIncome = async (req, res) => {
       income_type_id,
       income_category_id,
       income_sub_category_id,
-      date, 
       description, 
+      date,
       family_member_id,
-      wallet_id
+      wallet_id  // Added wallet_id
     } = req.body;
-    
+
     const query = `
       INSERT INTO income (
         income_type_id,
@@ -133,7 +132,7 @@ export const createIncome = async (req, res) => {
     `;
     
     const params = [
-      income_type_id, 
+      income_type_id,
       income_category_id,
       income_sub_category_id,
       amount, 
@@ -168,7 +167,7 @@ export const createIncome = async (req, res) => {
     });
   } catch (error) {
     console.error('Error adding income:', error);
-    res.status(500).json({ status: 'error', message: 'Failed to add income' });
+    res.status(500).json({ status: 'error', message: 'Failed to add income', error: error.message });
   }
 };
 
@@ -180,11 +179,11 @@ export const updateIncome = async (req, res) => {
       amount, 
       income_type_id,
       income_category_id,
-      income_sub_category_id, 
-      date, 
+      income_sub_category_id,
       description, 
+      date,
       family_member_id,
-      wallet_id
+      wallet_id  // Added wallet_id
     } = req.body;
     
     // First, get the existing income to handle wallet changes
@@ -195,7 +194,7 @@ export const updateIncome = async (req, res) => {
     if (oldIncome) {
       // If wallet is changing or amount is changing, update wallet balances
       if (oldIncome.wallet_id !== wallet_id || parseFloat(oldIncome.amount) !== parseFloat(amount)) {
-        // If there was a previous wallet, restore its amount
+        // If there was a previous wallet, update its amount
         if (oldIncome.wallet_id) {
           const [oldWalletRows] = await pool.query('SELECT amount FROM wallet WHERE id = ?', [oldIncome.wallet_id]);
           const oldWallet = getSafeRows(oldWalletRows)[0];
@@ -223,20 +222,19 @@ export const updateIncome = async (req, res) => {
     
     const query = `
       UPDATE income
-      SET 
-        income_type_id = ?,
-        income_category_id = ?,
-        income_sub_category_id = ?,
-        amount = ?, 
-        date = ?, 
-        description = ?, 
-        family_member_id = ?,
-        wallet_id = ?
+      SET income_type_id = ?,
+          income_category_id = ?,
+          income_sub_category_id = ?,
+          amount = ?, 
+          date = ?, 
+          description = ?,
+          family_member_id = ?,
+          wallet_id = ?
       WHERE id = ?
     `;
     
     const [result] = await pool.query(query, [
-      income_type_id, 
+      income_type_id,
       income_category_id,
       income_sub_category_id,
       amount, 
@@ -268,7 +266,7 @@ export const deleteIncome = async (req, res) => {
     const [existingIncome] = await pool.query('SELECT amount, wallet_id FROM income WHERE id = ?', [id]);
     const oldIncome = getSafeRows(existingIncome)[0];
     
-    // If there was a wallet, restore its amount
+    // If there was a wallet, update its amount
     if (oldIncome && oldIncome.wallet_id) {
       const [walletRows] = await pool.query('SELECT amount FROM wallet WHERE id = ?', [oldIncome.wallet_id]);
       const wallet = getSafeRows(walletRows)[0];

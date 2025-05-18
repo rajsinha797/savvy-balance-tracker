@@ -19,7 +19,7 @@ router.get('/docs', (req, res) => {
       { path: '/api/expenses', description: 'Expense related endpoints' },
       { path: '/api/budgets', description: 'Budget related endpoints' },
       { path: '/api/families', description: 'Family related endpoints' },
-      { path: '/api/family-members', description: 'Family members related endpoints' },
+      { path: '/api/family/members', description: 'Family members related endpoints' },
       { path: '/api/reports', description: 'Reports related endpoints' },
       { path: '/api/wallet', description: 'Wallet related endpoints' }
     ]
@@ -31,7 +31,7 @@ router.use('/income', incomeRoutes);
 router.use('/expenses', expenseRoutes);
 router.use('/budgets', budgetRoutes);
 router.use('/families', familyRoutes);
-router.use('/family-members', familyMemberRoutes);
+router.use('/family/members', familyMemberRoutes); // Fixed path to match client expectation
 router.use('/reports', reportRoutes);
 router.use('/wallet', walletRoutes);
 

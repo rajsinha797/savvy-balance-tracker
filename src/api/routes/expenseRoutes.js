@@ -15,6 +15,9 @@ router.delete('/:id', expenseController.deleteExpense);
 router.get('/categories', expenseController.getExpenseCategories);
 router.get('/wallets', expenseController.getAvailableWallets);
 
+// Added route for expense-categories for backward compatibility
+router.get('/expense-categories', expenseController.getExpenseCategories);
+
 // Expense categorization endpoints
 router.get('/types', expenseCategoryController.getAllExpenseTypes);
 router.get('/categories/by-type/:typeId', expenseCategoryController.getExpenseCategoriesByType);
