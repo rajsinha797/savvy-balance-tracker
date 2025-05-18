@@ -2,7 +2,7 @@
 import { ResultSetHeader, RowDataPacket, OkPacket } from 'mysql2';
 
 // Define the types for MySQL query results
-export type QueryResult = RowDataPacket[] | RowDataPacket[][] | ResultSetHeader | OkPacket | OkPacket[] | null;
+export type QueryResult = RowDataPacket[] | RowDataPacket[][] | ResultSetHeader | ResultSetHeader[] | OkPacket | OkPacket[] | null;
 
 /**
  * Helper function to check if a query result is an array of rows
