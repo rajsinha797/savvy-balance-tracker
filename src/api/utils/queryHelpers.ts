@@ -1,5 +1,8 @@
 
-import { ResultSetHeader, RowDataPacket, OkPacket } from 'mysql2';
+import pkg from 'mysql2';
+const { ResultSetHeader, RowDataPacket } = pkg;
+// Note: OkPacket needs to be accessed differently
+const OkPacket = pkg.OkPacket || pkg.default.OkPacket;
 
 // Define the types for MySQL query results - updated to include tuple format
 export type QueryResult = 
@@ -10,6 +13,7 @@ export type QueryResult =
   | OkPacket 
   | OkPacket[] 
   | [RowDataPacket[], ResultSetHeader]
+  | [RowDataPacket[], any]  // For fields info from mysql2
   | null;
 
 /**
@@ -47,12 +51,12 @@ export const getUuidFromResult = (result: QueryResult): string | null => {
   
   // Handle case when result itself is an object with id (some queries return this format)
   if (result && typeof result === 'object' && !Array.isArray(result) && 'id' in result) {
-    return String(result.id);
+    return String((result as any).id);
   }
   
   // Handle OkPacket case that might have insertId
-  if (result && typeof result === 'object' && !Array.isArray(result) && 'insertId' in result) {
-    return String(result.insertId);
+  if (result && typeof result === 'object' && !Array.isArray(result) && 'insertId' in (result as any)) {
+    return String((result as any).insertId);
   }
   
   // For handling SELECT UUID() - in mysql2 the first element might be rows array, second is fields
@@ -110,28 +114,28 @@ export const handleOkPacket = (result: QueryResult) => {
     if (okPacket && typeof okPacket === 'object' && ('affectedRows' in okPacket || 'insertId' in okPacket)) {
       return {
         success: true,
-        affectedRows: okPacket.affectedRows || 0,
-        insertId: okPacket.insertId || null
+        affectedRows: (okPacket as any).affectedRows || 0,
+        insertId: (okPacket as any).insertId || null
       };
     }
   }
   
   // Handle direct OkPacket
-  if (result && typeof result === 'object' && !Array.isArray(result) && ('affectedRows' in result || 'insertId' in result)) {
+  if (result && typeof result === 'object' && !Array.isArray(result) && ('affectedRows' in (result as any) || 'insertId' in (result as any))) {
     return {
       success: true,
-      affectedRows: result.affectedRows || 0,
-      insertId: result.insertId || null
+      affectedRows: (result as any).affectedRows || 0,
+      insertId: (result as any).insertId || null
     };
   }
   
   // Handle [OkPacket] format
   if (Array.isArray(result) && result.length > 0 && 
-      typeof result[0] === 'object' && ('affectedRows' in result[0] || 'insertId' in result[0])) {
+      typeof result[0] === 'object' && ('affectedRows' in (result[0] as any) || 'insertId' in (result[0] as any))) {
     return {
       success: true,
-      affectedRows: result[0].affectedRows || 0,
-      insertId: result[0].insertId || null
+      affectedRows: (result[0] as any).affectedRows || 0,
+      insertId: (result[0] as any).insertId || null
     };
   }
   

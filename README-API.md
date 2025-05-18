@@ -11,7 +11,7 @@
 
 1. Make sure your MySQL server is running and the `fintrack` database is created.
 
-2. Configure the database connection in `src/api/server.js` (if your MySQL configuration differs from the defaults):
+2. Configure the database connection in `src/api/db/db.js` (if your MySQL configuration differs from the defaults):
    ```javascript
    const pool = mysql.createPool({
      host: 'localhost',
@@ -50,7 +50,7 @@ Press Ctrl+C to stop the server
 
 #### Database Connection Problems
 - Verify MySQL is running (`mysql --version`)
-- Check database credentials in server.js
+- Check database credentials in db.js
 - Confirm the database exists (`mysql -u root -e "SHOW DATABASES;"`)
 - Test the connection: `curl http://localhost:3001/api/test`
 
@@ -59,7 +59,7 @@ If you're experiencing CORS issues, check the CORS configuration in `src/api/ser
 
 ```javascript
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000'], // Add your frontend URLs
+  origin: ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:8080'], // Add your frontend URLs
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
@@ -75,18 +75,27 @@ Add additional origins if your frontend is running on a different port.
 - `GET /api/test` - Test database connection
 
 ### Income Endpoints
-- `GET /api/income/categories` - Get all income categories
 - `GET /api/income` - Get all incomes
 - `GET /api/income/:id` - Get income by ID
 - `POST /api/income` - Add new income
 - `PUT /api/income/:id` - Update income
 - `DELETE /api/income/:id` - Delete income
 
+### New Income Categorization Endpoints
+- `GET /api/income/types` - Get all income types
+- `GET /api/income/categories/by-type/:typeId` - Get income categories by type ID
+- `GET /api/income/subcategories/by-category/:categoryId` - Get income subcategories by category ID
+
 ### Expense Endpoints
 - `GET /api/expenses` - Get all expenses
 - `POST /api/expenses` - Add new expense
 - `PUT /api/expenses/:id` - Update expense
 - `DELETE /api/expenses/:id` - Delete expense
+
+### New Expense Categorization Endpoints
+- `GET /api/expenses/types` - Get all expense types
+- `GET /api/expenses/categories/by-type/:typeId` - Get expense categories by type ID
+- `GET /api/expenses/subcategories/by-category/:categoryId` - Get expense subcategories by category ID
 
 ### Family Endpoints
 - `GET /api/families` - Get all families
@@ -108,14 +117,26 @@ Add additional origins if your frontend is running on a different port.
 
 ## Database Schema
 
-The schema includes tables for:
-- `family` - Central entity for grouping users
-- `user` - User details and authentication
-- `income_category` - Categories for income
-- `expense_category` - Categories for expenses
-- `income` - Income transactions
-- `expenses` - Expense transactions
+### New Categorization System
+
+The new schema uses a hierarchical categorization system for both income and expenses:
+
+#### Income Categorization
+- `income_type` - Top level categorization (e.g., Income, Savings, Investments)
+- `income_category` - Mid-level categorization related to a specific type
+- `income_sub_category` - Detailed categorization related to a specific category
+
+#### Expense Categorization
+- `expense_type` - Top level categorization (e.g., Housing, Transportation, Food)
+- `expense_category` - Mid-level categorization related to a specific type
+- `expense_sub_category` - Detailed categorization related to a specific category
+
+### Core Tables
 - `family_members` - Family member details
+- `income` - Income transactions with categorization
+- `expenses` - Expense transactions with categorization
+- `budgets` - Budget periods
+- `budget_categories` - Budget allocation by category
 
 For the complete schema, see `src/api/setup-database.sql`
 
@@ -128,16 +149,34 @@ You can test the API endpoints using cURL or Postman. Here are some examples:
 curl http://localhost:3001/api/test
 ```
 
-### Get All Families
+### Get All Expense Types
 ```bash
-curl http://localhost:3001/api/families
+curl http://localhost:3001/api/expenses/types
 ```
 
-### Add a Family
+### Get Expense Categories By Type
 ```bash
-curl -X POST http://localhost:3001/api/families \
+curl http://localhost:3001/api/expenses/categories/by-type/1
+```
+
+### Get Expense Subcategories By Category
+```bash
+curl http://localhost:3001/api/expenses/subcategories/by-category/1
+```
+
+### Add a New Expense
+```bash
+curl -X POST http://localhost:3001/api/expenses \
   -H "Content-Type: application/json" \
-  -d '{"name": "Smith Family"}'
+  -d '{
+    "amount": 1500,
+    "expense_type_id": 1,
+    "expense_category_id": 2,
+    "expense_sub_category_id": 3,
+    "date": "2023-05-10",
+    "description": "Monthly electricity bill",
+    "family_member_id": "1"
+  }'
 ```
 
 ### Get Family Members

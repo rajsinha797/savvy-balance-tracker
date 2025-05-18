@@ -5,6 +5,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Check } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Calendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
+import { CalendarIcon } from 'lucide-react';
+import { 
+  Popover, 
+  PopoverContent, 
+  PopoverTrigger 
+} from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
 import { 
   ExpenseType, 
   ExpenseCategoryWithTypeId, 
@@ -46,6 +55,9 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
   const [expenseSubCategories, setExpenseSubCategories] = useState<ExpenseSubCategory[]>([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(false);
   const [isLoadingSubCategories, setIsLoadingSubCategories] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(
+    formData.date ? new Date(formData.date) : undefined
+  );
 
   // Fetch categories when type changes
   useEffect(() => {
@@ -80,6 +92,14 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
       setExpenseSubCategories([]);
     }
   }, [formData.expense_category_id, getExpenseSubCategoriesByCategory]);
+
+  // Update formData when date changes
+  const handleDateSelect = (date: Date | undefined) => {
+    setSelectedDate(date);
+    if (date) {
+      onFormChange('date', format(date, 'yyyy-MM-dd'));
+    }
+  };
 
   return (
     <div className="grid gap-4 py-4">
@@ -193,6 +213,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
           </SelectContent>
         </Select>
       </div>
+      
       <div className="grid gap-2">
         <Label htmlFor="description">Description</Label>
         <Input
@@ -204,22 +225,40 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
           className="bg-fintrack-bg-dark border-fintrack-bg-dark"
         />
       </div>
+      
+      {/* Date Picker */}
       <div className="grid gap-2">
         <Label htmlFor="date">Date</Label>
-        <Input
-          id="date"
-          type="date"
-          value={formData.date}
-          onChange={(e) => {
-            onFormChange('date', e.target.value);
-          }}
-          className="bg-fintrack-bg-dark border-fintrack-bg-dark"
-        />
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              id="date"
+              variant="outline"
+              className={cn(
+                "w-full justify-start text-left font-normal bg-fintrack-bg-dark border-fintrack-bg-dark",
+                !selectedDate && "text-muted-foreground"
+              )}
+            >
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0 bg-fintrack-card-dark border-fintrack-bg-dark">
+            <Calendar
+              mode="single"
+              selected={selectedDate}
+              onSelect={handleDateSelect}
+              initialFocus
+              className={cn("p-3 pointer-events-auto")}
+            />
+          </PopoverContent>
+        </Popover>
       </div>
+      
       <Button 
         onClick={onSubmit}
         className="mt-2 bg-fintrack-purple hover:bg-fintrack-purple/90"
-        disabled={!formData.amount || !formData.expense_type_id || !formData.expense_category_id || !formData.expense_sub_category_id}
+        disabled={!formData.amount || !formData.expense_type_id || !formData.expense_category_id || !formData.expense_sub_category_id || !formData.date}
       >
         <Check className="h-4 w-4 mr-2" />
         {isEditing ? 'Update Expense' : 'Add Expense'}

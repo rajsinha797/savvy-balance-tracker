@@ -27,7 +27,7 @@ export const getAllExpenseTypes = async (req, res) => {
     const [result] = await pool.query('SELECT id, name FROM expense_type');
     
     // Ensure we're working with an array
-    const rows = isResultArray(result) ? result : [];
+    const rows = getSafeRows(result);
     
     res.json(rows);
   } catch (error) {
@@ -49,7 +49,7 @@ export const getExpenseCategoriesByType = async (req, res) => {
     );
     
     // Ensure we're working with an array
-    const rows = isResultArray(result) ? result : [];
+    const rows = getSafeRows(result);
     
     res.json(rows);
   } catch (error) {
@@ -71,7 +71,7 @@ export const getExpenseSubcategoriesByCategory = async (req, res) => {
     );
     
     // Ensure we're working with an array
-    const rows = isResultArray(result) ? result : [];
+    const rows = getSafeRows(result);
     
     res.json(rows);
   } catch (error) {

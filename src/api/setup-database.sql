@@ -109,7 +109,7 @@ CREATE TABLE budget_categories (
   UNIQUE KEY (budget_id, category)
 );
 
--- Update income table structure to include the new categorization fields
+-- Create income table with the new categorization fields
 CREATE TABLE income (
   id INT AUTO_INCREMENT PRIMARY KEY,
   amount DECIMAL(10, 2) NOT NULL,
@@ -127,11 +127,10 @@ CREATE TABLE income (
   FOREIGN KEY (income_sub_category_id) REFERENCES income_sub_category(id) ON DELETE SET NULL
 );
 
--- Update expenses table structure to include the new categorization fields
+-- Create expenses table with the new categorization fields
 CREATE TABLE expenses (
   id INT AUTO_INCREMENT PRIMARY KEY,
   amount DECIMAL(10, 2) NOT NULL,
-  category VARCHAR(100) NOT NULL,
   expense_type_id INT,
   expense_category_id INT,
   expense_sub_category_id INT,
@@ -241,9 +240,12 @@ INSERT INTO income (amount, income_type_id, income_category_id, income_sub_categ
 (25000, 1, 1, 2, '2023-05-01', 'Part-time job', '2'),
 (10000, 1, 1, 1, '2023-05-10', 'Website development project', '1'),
 (5000, 3, 4, 4, '2023-05-15', 'Dividend income', '1'),
-(8000, 1, 1, 2, '2023-05-20', 'Apartment rent', '2'),
-(45000, 1, 1, 1, '2023-06-01', 'June Salary', '1'),
-(25000, 1, 1, 2, '2023-06-01', 'Part-time job', '2'),
-(12000, 1, 1, 1, '2023-06-12', 'Logo design project', '1'),
-(5500, 3, 4, 4, '2023-06-15', 'Stock gain', '2'),
-(8000, 1, 1, 2, '2023-06-20', 'Apartment rent', '2');
+(8000, 1, 1, 2, '2023-05-20', 'Apartment rent', '2');
+
+-- Insert sample expenses
+INSERT INTO expenses (amount, expense_type_id, expense_category_id, expense_sub_category_id, date, description, family_member_id) VALUES
+(15000, 1, 1, 1, '2023-05-05', 'May rent', '1'),
+(3500, 1, 2, 3, '2023-05-10', 'Electricity bill', '2'),
+(1200, 2, 3, 5, '2023-05-15', 'Petrol', '1'),
+(2500, 3, 5, 7, '2023-05-18', 'Weekly groceries', '2'),
+(1800, 3, 6, 8, '2023-05-20', 'Dinner at restaurant', '1');

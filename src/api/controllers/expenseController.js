@@ -1,28 +1,37 @@
 
 import pool from '../db/db.js';
-import { isResultArray } from '../utils/queryHelpers.js';
+import { getSafeRows } from '../utils/queryHelpers.js';
 
-// Get all expenses
+// Get all expenses with detailed category info
 export const getAllExpenses = async (req, res) => {
   try {
-    const familyId = req.query.family_member_id;
+    const familyMemberId = req.query.family_member_id;
     
+    // Updated query to include expense_type, expense_category and expense_sub_category names
     let query = `
-      SELECT e.expense_id as id, e.amount, e.date, e.description, e.category, 
-             fm.name as family_member, e.family_member_id
+      SELECT e.id, e.amount, e.date, e.description,
+             et.name AS expense_type_name,
+             ec.name AS expense_category_name,
+             esc.name AS expense_sub_category_name,
+             fm.name AS family_member,
+             e.expense_type_id, e.expense_category_id, e.expense_sub_category_id,
+             e.family_member_id
       FROM expenses e
+      LEFT JOIN expense_type et ON e.expense_type_id = et.id
+      LEFT JOIN expense_category ec ON e.expense_category_id = ec.id
+      LEFT JOIN expense_sub_category esc ON e.expense_sub_category_id = esc.id
       LEFT JOIN family_members fm ON e.family_member_id = fm.id
     `;
     
-    if (familyId) {
+    if (familyMemberId) {
       query += ` WHERE e.family_member_id = ?
                 ORDER BY e.date DESC`;
-      const [rows] = await pool.query(query, [familyId]);
-      res.json(rows);
+      const [result] = await pool.query(query, [familyMemberId]);
+      res.json(getSafeRows(result));
     } else {
       query += ` ORDER BY e.date DESC`;
-      const [rows] = await pool.query(query);
-      res.json(rows);
+      const [result] = await pool.query(query);
+      res.json(getSafeRows(result));
     }
   } catch (error) {
     console.error('Error fetching expenses:', error);
@@ -33,17 +42,33 @@ export const getAllExpenses = async (req, res) => {
 // Add new expense
 export const createExpense = async (req, res) => {
   try {
-    const { amount, category, date, description, family_member_id } = req.body;
+    const { 
+      amount,
+      expense_type_id,
+      expense_category_id,
+      expense_sub_category_id,
+      date,
+      description,
+      family_member_id 
+    } = req.body;
     
     const query = `
-      INSERT INTO expenses (family_id, user_id, category, amount, date, description, family_member_id)
+      INSERT INTO expenses (
+        expense_type_id,
+        expense_category_id,
+        expense_sub_category_id,
+        amount,
+        date,
+        description,
+        family_member_id
+      )
       VALUES (?, ?, ?, ?, ?, ?, ?)
     `;
     
     const [result] = await pool.query(query, [
-      1, // Default family ID 
-      1, // Default user ID
-      category, 
+      expense_type_id,
+      expense_category_id,
+      expense_sub_category_id,
       amount, 
       date, 
       description,
@@ -67,16 +92,32 @@ export const createExpense = async (req, res) => {
 export const updateExpense = async (req, res) => {
   try {
     const { id } = req.params;
-    const { amount, category, date, description, family_member_id } = req.body;
+    const { 
+      amount,
+      expense_type_id,
+      expense_category_id,
+      expense_sub_category_id,
+      date,
+      description,
+      family_member_id 
+    } = req.body;
     
     const query = `
       UPDATE expenses
-      SET category = ?, amount = ?, date = ?, description = ?, family_member_id = ?
-      WHERE expense_id = ?
+      SET expense_type_id = ?, 
+          expense_category_id = ?, 
+          expense_sub_category_id = ?, 
+          amount = ?, 
+          date = ?, 
+          description = ?,
+          family_member_id = ?
+      WHERE id = ?
     `;
     
     const [result] = await pool.query(query, [
-      category, 
+      expense_type_id,
+      expense_category_id,
+      expense_sub_category_id,
       amount, 
       date, 
       description,
@@ -101,7 +142,7 @@ export const deleteExpense = async (req, res) => {
   try {
     const { id } = req.params;
     
-    const query = 'DELETE FROM expenses WHERE expense_id = ?';
+    const query = 'DELETE FROM expenses WHERE id = ?';
     const [result] = await pool.query(query, [id]);
     
     if (result.affectedRows === 0) {
@@ -116,40 +157,26 @@ export const deleteExpense = async (req, res) => {
   }
 };
 
-// Get expense categories
+// Get expense categories (legacy, kept for backward compatibility)
 export const getExpenseCategories = async (req, res) => {
   try {
-    // Check if the expense_categories table exists
-    const [tables] = await pool.query(`
-      SELECT TABLE_NAME 
-      FROM information_schema.TABLES 
-      WHERE TABLE_NAME = 'expense_categories'
-    `);
-
-    // If the table doesn't exist, create it and add some default categories
-    if (!isResultArray(tables) || tables.length === 0) {
-      await pool.query(`
-        CREATE TABLE expense_categories (
-          id INT AUTO_INCREMENT PRIMARY KEY,
-          name VARCHAR(50) NOT NULL,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-      `);
-      
-      const defaultCategories = [
-        'Housing', 'Utilities', 'Groceries', 'Transportation', 
-        'Entertainment', 'Health', 'Personal Care', 'Education', 
-        'Debt Payments', 'Insurance', 'Savings', 'Investments', 
-        'Charity', 'Other'
-      ];
-      
-      for (const category of defaultCategories) {
-        await pool.query('INSERT INTO expense_categories (name) VALUES (?)', [category]);
-      }
+    // First try to get from expense_type table (new schema)
+    const [types] = await pool.query('SELECT id, name FROM expense_type');
+    
+    if (getSafeRows(types).length > 0) {
+      res.json(getSafeRows(types));
+      return;
     }
-
-    const [categories] = await pool.query('SELECT id, name FROM expense_categories ORDER BY name');
-    res.json(categories);
+    
+    // Fallback to legacy table
+    try {
+      const [categories] = await pool.query('SELECT id, name FROM expense_categories');
+      res.json(getSafeRows(categories));
+    } catch (legacyError) {
+      console.error('Error with legacy expense categories:', legacyError);
+      // If legacy table doesn't exist, return empty array
+      res.json([]);
+    }
   } catch (error) {
     console.error('Error fetching expense categories:', error);
     res.status(500).json({ 
