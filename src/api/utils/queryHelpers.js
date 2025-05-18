@@ -1,9 +1,6 @@
 
-// Import MySQL types with CommonJS-compatible approach
-import pkg from 'mysql2';
-const { ResultSetHeader, RowDataPacket } = pkg;
-// Note: OkPacket needs to be accessed differently
-const OkPacket = pkg.OkPacket || pkg.default.OkPacket;
+// Import MySQL using standard import to ensure compatibility
+import mysql from 'mysql2';
 
 // Define the types for MySQL query results - updated to include tuple format
 export const QueryResult = Object;

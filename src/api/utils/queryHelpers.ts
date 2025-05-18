@@ -1,25 +1,23 @@
 
-import pkg from 'mysql2';
-const { ResultSetHeader, RowDataPacket } = pkg;
-// Note: OkPacket needs to be accessed differently
-const OkPacket = pkg.OkPacket || pkg.default.OkPacket;
+// We need to use the types from mysql2 properly
+import mysql from 'mysql2';
 
-// Define the types for MySQL query results - updated to include tuple format
+// Define the types for MySQL query results using proper TypeScript approach
 export type QueryResult = 
-  | RowDataPacket[] 
-  | RowDataPacket[][] 
-  | ResultSetHeader 
-  | ResultSetHeader[] 
-  | OkPacket 
-  | OkPacket[] 
-  | [RowDataPacket[], ResultSetHeader]
-  | [RowDataPacket[], any]  // For fields info from mysql2
+  | any[] 
+  | any[][] 
+  | mysql.ResultSetHeader
+  | mysql.ResultSetHeader[] 
+  | mysql.OkPacket
+  | mysql.OkPacket[] 
+  | [any[], mysql.ResultSetHeader]
+  | [any[], any]  // For fields info from mysql2
   | null;
 
 /**
  * Helper function to check if a query result is an array of rows
  */
-export const isResultArray = (result: QueryResult): result is RowDataPacket[] | RowDataPacket[][] => {
+export const isResultArray = (result: QueryResult): boolean => {
   if (!result) return false;
   
   // Handle the [rows, fields] format from mysql2
@@ -50,7 +48,7 @@ export const getUuidFromResult = (result: QueryResult): string | null => {
   }
   
   // Handle case when result itself is an object with id (some queries return this format)
-  if (result && typeof result === 'object' && !Array.isArray(result) && 'id' in result) {
+  if (result && typeof result === 'object' && !Array.isArray(result) && 'id' in (result as any)) {
     return String((result as any).id);
   }
   
