@@ -64,6 +64,7 @@ router.get('/', (req, res) => {
       test: '/api/test',
       income: '/api/income',
       incomeCategories: '/api/income/categories',
+      incomeTypes: '/api/income/types',
       expenses: '/api/expenses',
       expenseCategories: '/api/expense-categories',
       families: '/api/families',

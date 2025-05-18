@@ -1,11 +1,11 @@
 
 import pool from '../db/db.js';
-import { isResultArray, getUuidFromResult } from '../utils/queryHelpers.js';
+import { isResultArray, getSafeRows, handleOkPacket } from '../utils/queryHelpers.js';
 
-// Get all income categories
+// Get all income categories - legacy function but updated to use new table
 export const getAllIncomeCategories = async (req, res) => {
   try {
-    const [rows] = await pool.query('SELECT * FROM income_category');
+    const [rows] = await pool.query('SELECT id as category_id, name FROM income_category');
     res.json(rows);
   } catch (error) {
     console.error('Error fetching income categories:', error);
@@ -27,10 +27,10 @@ export const getAllIncomeTypes = async (req, res) => {
 // Get all incomes
 export const getAllIncomes = async (req, res) => {
   try {
-    const familyId = req.query.family_member_id;
+    const familyMemberId = req.query.family_member_id;
     
     let query = `
-      SELECT i.income_id as id, i.amount, i.date, i.description, 
+      SELECT i.id as id, i.amount, i.date, i.description, 
              it.name as income_type_name,
              ic.name as income_category_name,
              isc.name as income_sub_category_name,
@@ -43,10 +43,10 @@ export const getAllIncomes = async (req, res) => {
       LEFT JOIN family_members fm ON i.family_member_id = fm.id
     `;
     
-    if (familyId) {
+    if (familyMemberId) {
       query += ` WHERE i.family_member_id = ?
                 ORDER BY i.date DESC`;
-      const [rows] = await pool.query(query, [familyId]);
+      const [rows] = await pool.query(query, [familyMemberId]);
       res.json(rows);
     } else {
       query += ` ORDER BY i.date DESC`;
@@ -72,7 +72,7 @@ export const getIncomeById = async (req, res) => {
     }
     
     const query = `
-      SELECT i.income_id as id, i.amount, i.date, i.description,
+      SELECT i.id as id, i.amount, i.date, i.description,
              it.name as income_type_name, 
              ic.name as income_category_name,
              ist.name as income_sub_category_name,
@@ -82,7 +82,7 @@ export const getIncomeById = async (req, res) => {
       LEFT JOIN income_type it ON i.income_type_id = it.id
       LEFT JOIN income_category ic ON i.income_category_id = ic.id
       LEFT JOIN income_sub_category ist ON i.income_sub_category_id = ist.id
-      WHERE i.income_id = ?
+      WHERE i.id = ?
     `;
     
     const [rows] = await pool.query(query, [id]);
@@ -112,14 +112,8 @@ export const createIncome = async (req, res) => {
       family_member_id 
     } = req.body;
     
-    // Set default values for now
-    const family_id = 1; // Default family ID
-    const user_id = 1;  // Default user ID
-    
     const query = `
       INSERT INTO income (
-        family_id, 
-        user_id, 
         income_type_id,
         income_category_id,
         income_sub_category_id,
@@ -128,12 +122,10 @@ export const createIncome = async (req, res) => {
         description, 
         family_member_id
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `;
     
     const [result] = await pool.query(query, [
-      family_id, 
-      user_id, 
       income_type_id, 
       income_category_id,
       income_sub_category_id,
@@ -180,7 +172,7 @@ export const updateIncome = async (req, res) => {
         date = ?, 
         description = ?, 
         family_member_id = ?
-      WHERE income_id = ?
+      WHERE id = ?
     `;
     
     const [result] = await pool.query(query, [
@@ -211,7 +203,7 @@ export const deleteIncome = async (req, res) => {
   try {
     const { id } = req.params;
     
-    const query = 'DELETE FROM income WHERE income_id = ?';
+    const query = 'DELETE FROM income WHERE id = ?';
     const [result] = await pool.query(query, [id]);
     
     if (result.affectedRows === 0) {
@@ -235,9 +227,7 @@ export const getCategoriesByType = async (req, res) => {
       [typeId]
     );
     
-    // Check if the result is an array before sending it
-    const result = isResultArray(rows) ? rows : [];
-    
+    const result = getSafeRows(rows);
     res.json(result);
   } catch (error) {
     console.error(`Error fetching income categories for type ${req.params.typeId}:`, error);
@@ -254,9 +244,7 @@ export const getSubcategoriesByCategory = async (req, res) => {
       [categoryId]
     );
     
-    // Check if the result is an array before sending it
-    const result = isResultArray(rows) ? rows : [];
-    
+    const result = getSafeRows(rows);
     res.json(result);
   } catch (error) {
     console.error(`Error fetching income subcategories for category ${req.params.categoryId}:`, error);

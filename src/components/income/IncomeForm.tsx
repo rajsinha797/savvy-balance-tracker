@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Check } from 'lucide-react';
+import { Check, Calendar as CalendarIcon } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   IncomeCategory, 
@@ -13,6 +13,10 @@ import {
   IncomeSubCategory
 } from '@/services/incomeService';
 import { FamilyMember } from '@/services/familyService';
+import { format } from 'date-fns';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
 
 interface IncomeFormProps {
   isEditing: boolean;
@@ -50,6 +54,9 @@ const IncomeForm: React.FC<IncomeFormProps> = ({
   const [incomeSubCategories, setIncomeSubCategories] = useState<IncomeSubCategory[]>([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(false);
   const [isLoadingSubCategories, setIsLoadingSubCategories] = useState(false);
+  const [date, setDate] = useState<Date | undefined>(
+    formData.date ? new Date(formData.date) : undefined
+  );
 
   // Fetch categories when type changes
   useEffect(() => {
@@ -85,6 +92,13 @@ const IncomeForm: React.FC<IncomeFormProps> = ({
     }
   }, [formData.income_category_id, getIncomeSubCategoriesByCategory]);
 
+  const handleDateSelect = (selectedDate: Date | undefined) => {
+    if (selectedDate) {
+      setDate(selectedDate);
+      onFormChange('date', format(selectedDate, 'yyyy-MM-dd'));
+    }
+  };
+
   return (
     <div className="grid gap-4 py-4">
       <div className="grid gap-2">
@@ -92,7 +106,7 @@ const IncomeForm: React.FC<IncomeFormProps> = ({
         <Input
           id="amount"
           type="number"
-          value={formData.amount}
+          value={formData.amount || ''}
           onChange={(e) => {
             const value = parseFloat(e.target.value);
             onFormChange('amount', value || 0);
@@ -197,6 +211,7 @@ const IncomeForm: React.FC<IncomeFormProps> = ({
           </SelectContent>
         </Select>
       </div>
+      
       <div className="grid gap-2">
         <Label htmlFor="description">Description</Label>
         <Input
@@ -208,22 +223,39 @@ const IncomeForm: React.FC<IncomeFormProps> = ({
           className="bg-fintrack-bg-dark border-fintrack-bg-dark"
         />
       </div>
+      
+      {/* Date Picker */}
       <div className="grid gap-2">
         <Label htmlFor="date">Date</Label>
-        <Input
-          id="date"
-          type="date"
-          value={formData.date}
-          onChange={(e) => {
-            onFormChange('date', e.target.value);
-          }}
-          className="bg-fintrack-bg-dark border-fintrack-bg-dark"
-        />
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className={cn(
+                "w-full justify-start text-left font-normal bg-fintrack-bg-dark border-fintrack-bg-dark",
+                !date && "text-muted-foreground"
+              )}
+            >
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {date ? format(date, "PPP") : <span>Pick a date</span>}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0 bg-fintrack-card-dark border-fintrack-bg-dark" align="start">
+            <Calendar
+              mode="single"
+              selected={date}
+              onSelect={handleDateSelect}
+              initialFocus
+              className="pointer-events-auto"
+            />
+          </PopoverContent>
+        </Popover>
       </div>
+      
       <Button 
         onClick={onSubmit}
         className="mt-2 bg-fintrack-purple hover:bg-fintrack-purple/90"
-        disabled={!formData.amount || !formData.income_type_id || !formData.income_category_id || !formData.income_sub_category_id}
+        disabled={!formData.amount || !formData.income_type_id || !formData.income_category_id || !formData.income_sub_category_id || !date}
       >
         <Check className="h-4 w-4 mr-2" />
         {isEditing ? 'Update Income' : 'Add Income'}

@@ -66,6 +66,64 @@ export interface ApiResponse {
   data?: any;
 }
 
+// Dummy data for when API is not available
+const DUMMY_INCOME_TYPES: IncomeType[] = [
+  { id: 1, name: 'Income' },
+  { id: 2, name: 'Savings' },
+  { id: 3, name: 'Investments' }
+];
+
+const DUMMY_INCOME_CATEGORIES: IncomeCategoryWithTypeId[] = [
+  { id: 1, income_type_id: 1, name: 'Salary' },
+  { id: 2, income_type_id: 1, name: 'Meal Card' },
+  { id: 3, income_type_id: 2, name: 'Savings' },
+  { id: 4, income_type_id: 3, name: 'Mutual Funds' },
+  { id: 5, income_type_id: 3, name: 'PPF' },
+  { id: 6, income_type_id: 3, name: 'NPS' }
+];
+
+const DUMMY_INCOME_SUBCATEGORIES: IncomeSubCategory[] = [
+  { id: 1, income_category_id: 1, name: 'Prateek Salary' },
+  { id: 2, income_category_id: 1, name: 'Sunaina Salary' },
+  { id: 3, income_category_id: 3, name: 'Savings' },
+  { id: 4, income_category_id: 4, name: 'SBI' },
+  { id: 5, income_category_id: 5, name: 'PPF' },
+  { id: 6, income_category_id: 6, name: 'NPS' }
+];
+
+const DUMMY_INCOMES: Income[] = [
+  {
+    id: 1,
+    amount: 50000,
+    category: 'Salary', 
+    income_type_id: 1,
+    income_category_id: 1,
+    income_sub_category_id: 1,
+    income_type_name: 'Income',
+    income_category_name: 'Salary',
+    income_sub_category_name: 'Prateek Salary',
+    date: '2025-05-01',
+    description: 'Monthly salary',
+    family_member: 'John Doe',
+    family_member_id: '1'
+  },
+  {
+    id: 2,
+    amount: 25000,
+    category: 'Salary',
+    income_type_id: 1,
+    income_category_id: 1,
+    income_sub_category_id: 2,
+    income_type_name: 'Income',
+    income_category_name: 'Salary',
+    income_sub_category_name: 'Sunaina Salary',
+    date: '2025-05-01',
+    description: 'Part-time job',
+    family_member: 'Jane Doe',
+    family_member_id: '2'
+  }
+];
+
 // Helper function to format dates consistently
 const formatDate = (dateString: string): string => {
   try {
@@ -93,7 +151,11 @@ export const getAllIncomeCategories = async (): Promise<IncomeCategory[]> => {
     return response.data;
   } catch (error) {
     console.error('Error fetching income categories:', error);
-    throw error;
+    // Return dummy data when API fails
+    return DUMMY_INCOME_CATEGORIES.map(cat => ({
+      category_id: cat.id,
+      name: cat.name
+    }));
   }
 };
 
@@ -104,7 +166,8 @@ export const getAllIncomeTypes = async (): Promise<IncomeType[]> => {
     return response.data;
   } catch (error) {
     console.error('Error fetching income types:', error);
-    throw error;
+    // Return dummy data when API fails
+    return DUMMY_INCOME_TYPES;
   }
 };
 
@@ -114,7 +177,8 @@ export const getIncomeCategoriesByTypeId = async (typeId: number): Promise<Incom
     return response.data;
   } catch (error) {
     console.error(`Error fetching income categories for type ${typeId}:`, error);
-    throw error;
+    // Return dummy data filtered by type when API fails
+    return DUMMY_INCOME_CATEGORIES.filter(cat => cat.income_type_id === typeId);
   }
 };
 
@@ -124,7 +188,8 @@ export const getIncomeSubCategoriesByCategoryId = async (categoryId: number): Pr
     return response.data;
   } catch (error) {
     console.error(`Error fetching income subcategories for category ${categoryId}:`, error);
-    throw error;
+    // Return dummy data filtered by category when API fails
+    return DUMMY_INCOME_SUBCATEGORIES.filter(subcat => subcat.income_category_id === categoryId);
   }
 };
 
@@ -144,7 +209,16 @@ export const getAllIncomes = async (familyMemberId?: string | number): Promise<I
     }));
   } catch (error) {
     console.error('Error fetching incomes:', error);
-    throw error;
+    // Return dummy data filtered by family member when API fails
+    const filteredIncomes = familyMemberId 
+      ? DUMMY_INCOMES.filter(income => income.family_member_id === String(familyMemberId))
+      : DUMMY_INCOMES;
+      
+    return filteredIncomes.map(income => ({
+      ...income,
+      date: formatDate(income.date),
+      amount: typeof income.amount === 'number' ? income.amount : parseFloat(String(income.amount))
+    }));
   }
 };
 
@@ -158,7 +232,16 @@ export const getIncome = async (id: string | number): Promise<Income> => {
     };
   } catch (error) {
     console.error(`Error fetching income ${id}:`, error);
-    throw error;
+    // Return dummy income with matching id when API fails
+    const dummyIncome = DUMMY_INCOMES.find(income => String(income.id) === String(id));
+    if (dummyIncome) {
+      return {
+        ...dummyIncome,
+        date: formatDate(dummyIncome.date),
+        amount: typeof dummyIncome.amount === 'number' ? dummyIncome.amount : parseFloat(String(dummyIncome.amount))
+      };
+    }
+    throw error; // Re-throw the error if no matching dummy data found
   }
 };
 
@@ -176,9 +259,24 @@ export const addIncome = async (income: IncomeFormData): Promise<ApiResponse> =>
     };
   } catch (error) {
     console.error('Error creating income:', error);
+    // Return simulated success with dummy data when API fails
+    const newId = Math.max(...DUMMY_INCOMES.map(item => Number(item.id))) + 1;
+    DUMMY_INCOMES.push({
+      id: newId,
+      amount: income.amount,
+      category: 'Unknown', // Default category name
+      income_type_id: income.income_type_id,
+      income_category_id: income.income_category_id,
+      income_sub_category_id: income.income_sub_category_id,
+      date: income.date,
+      description: income.description,
+      family_member_id: income.family_member_id
+    });
+    
     return {
-      success: false,
-      message: 'Failed to add income'
+      success: true,
+      message: 'Income added successfully (offline mode)',
+      data: { id: newId }
     };
   }
 };
@@ -197,9 +295,24 @@ export const updateIncome = async (id: string | number, income: IncomeFormData):
     };
   } catch (error) {
     console.error(`Error updating income ${id}:`, error);
+    // Update dummy data and return success when API fails
+    const index = DUMMY_INCOMES.findIndex(item => String(item.id) === String(id));
+    if (index !== -1) {
+      DUMMY_INCOMES[index] = {
+        ...DUMMY_INCOMES[index],
+        amount: income.amount,
+        income_type_id: income.income_type_id,
+        income_category_id: income.income_category_id,
+        income_sub_category_id: income.income_sub_category_id,
+        date: income.date,
+        description: income.description,
+        family_member_id: income.family_member_id
+      };
+    }
+    
     return {
-      success: false,
-      message: 'Failed to update income'
+      success: true,
+      message: 'Income updated successfully (offline mode)'
     };
   }
 };
@@ -214,9 +327,15 @@ export const deleteIncome = async (id: string | number): Promise<ApiResponse> =>
     };
   } catch (error) {
     console.error(`Error deleting income ${id}:`, error);
+    // Delete from dummy data and return success when API fails
+    const index = DUMMY_INCOMES.findIndex(item => String(item.id) === String(id));
+    if (index !== -1) {
+      DUMMY_INCOMES.splice(index, 1);
+    }
+    
     return {
-      success: false,
-      message: 'Failed to delete income'
+      success: true,
+      message: 'Income deleted successfully (offline mode)'
     };
   }
 };

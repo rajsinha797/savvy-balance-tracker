@@ -1,3 +1,4 @@
+
 # FinTrack API Documentation
 
 This document provides comprehensive information about the FinTrack API endpoints, request/response formats, and usage instructions.
@@ -122,11 +123,9 @@ Send a GET request to `http://localhost:3001/api/test` to test the database conn
 [
   {
     "id": "1",
-    "family_id": 1,
     "name": "Self",
     "relationship": "Self",
-    "is_default": true,
-    "family_name": "Smith Family"
+    "is_default": true
   }
 ]
 ```
@@ -134,16 +133,14 @@ Send a GET request to `http://localhost:3001/api/test` to test the database conn
 ### Get Family Member by ID
 - **URL**: `/api/family/members/:id`
 - **Method**: `GET`
-- **URL Parameters**: `id=[integer]` Family member ID
+- **URL Parameters**: `id=[string]` Family member ID
 - **Response**: Single family member object
 ```json
 {
   "id": "1",
-  "family_id": 1,
   "name": "Self",
   "relationship": "Self",
-  "is_default": true,
-  "family_name": "Smith Family"
+  "is_default": true
 }
 ```
 
@@ -155,8 +152,7 @@ Send a GET request to `http://localhost:3001/api/test` to test the database conn
 {
   "name": "Child",
   "relationship": "Child",
-  "is_default": false,
-  "family_id": 1
+  "is_default": false
 }
 ```
 - **Response**:
@@ -164,24 +160,20 @@ Send a GET request to `http://localhost:3001/api/test` to test the database conn
 {
   "status": "success",
   "message": "Family member added successfully",
-  "id": 3
+  "id": "3"
 }
 ```
-- **Notes**: 
-  - If `is_default` is `true`, all other members in the same family will be set to `is_default: false`.
-  - `family_id` is optional and defaults to 1.
 
 ### Update Family Member
 - **URL**: `/api/family/members/:id`
 - **Method**: `PUT`
-- **URL Parameters**: `id=[integer]` Family member ID
+- **URL Parameters**: `id=[string]` Family member ID
 - **Request Body**:
 ```json
 {
   "name": "Updated Name",
   "relationship": "Child",
-  "is_default": false,
-  "family_id": 1
+  "is_default": false
 }
 ```
 - **Response**:
@@ -195,7 +187,7 @@ Send a GET request to `http://localhost:3001/api/test` to test the database conn
 ### Delete Family Member
 - **URL**: `/api/family/members/:id`
 - **Method**: `DELETE`
-- **URL Parameters**: `id=[integer]` Family member ID
+- **URL Parameters**: `id=[string]` Family member ID
 - **Response**:
 ```json
 {
@@ -203,11 +195,9 @@ Send a GET request to `http://localhost:3001/api/test` to test the database conn
   "message": "Family member deleted successfully"
 }
 ```
-- **Notes**: 
-  - Cannot delete a family member that is set as default.
-  - Cannot delete a family member that has transactions.
 
 ## Income API
+
 ### Get All Incomes
 - **URL**: `/api/income`
 - **Method**: `GET`
@@ -216,30 +206,79 @@ Send a GET request to `http://localhost:3001/api/test` to test the database conn
 ```json
 [
   {
-    "id": "1",
+    "id": 1,
     "amount": 5000,
-    "category": "Salary",
-    "description": "Monthly salary",
+    "income_type_id": 1,
+    "income_category_id": 1,
+    "income_sub_category_id": 1,
+    "income_type_name": "Income",
+    "income_category_name": "Salary",
+    "income_sub_category_name": "Prateek Salary",
     "date": "2025-05-01",
+    "description": "Monthly salary",
     "family_member": "Self",
     "family_member_id": "1"
   }
 ]
 ```
 
-### Get Income Categories
-- **URL**: `/api/income/categories`
+### Get Income Types
+- **URL**: `/api/income/types`
 - **Method**: `GET`
+- **Response**: Array of income type objects
+```json
+[
+  {
+    "id": 1,
+    "name": "Income"
+  },
+  {
+    "id": 2,
+    "name": "Savings"
+  },
+  {
+    "id": 3, 
+    "name": "Investments"
+  }
+]
+```
+
+### Get Income Categories by Type
+- **URL**: `/api/income/categories/by-type/:typeId`
+- **Method**: `GET`
+- **URL Parameters**: `typeId=[integer]` Income type ID
 - **Response**: Array of income category objects
 ```json
 [
   {
-    "category_id": 1,
+    "id": 1,
+    "income_type_id": 1,
     "name": "Salary"
   },
   {
-    "category_id": 2,
-    "name": "Freelance"
+    "id": 2,
+    "income_type_id": 1,
+    "name": "Meal Card"
+  }
+]
+```
+
+### Get Income Subcategories by Category
+- **URL**: `/api/income/subcategories/by-category/:categoryId`
+- **Method**: `GET`
+- **URL Parameters**: `categoryId=[integer]` Income category ID
+- **Response**: Array of income subcategory objects
+```json
+[
+  {
+    "id": 1,
+    "income_category_id": 1,
+    "name": "Prateek Salary"
+  },
+  {
+    "id": 2,
+    "income_category_id": 1,
+    "name": "Sunaina Salary"
   }
 ]
 ```
@@ -251,11 +290,16 @@ Send a GET request to `http://localhost:3001/api/test` to test the database conn
 - **Response**: Single income object
 ```json
 {
-  "id": "1",
+  "id": 1,
   "amount": 5000,
-  "category": "Salary",
-  "description": "Monthly salary",
+  "income_type_id": 1,
+  "income_category_id": 1,
+  "income_sub_category_id": 1,
+  "income_type_name": "Income",
+  "income_category_name": "Salary",
+  "income_sub_category_name": "Prateek Salary",
   "date": "2025-05-01",
+  "description": "Monthly salary",
   "family_member_id": "1"
 }
 ```
@@ -267,9 +311,11 @@ Send a GET request to `http://localhost:3001/api/test` to test the database conn
 ```json
 {
   "amount": 5000,
-  "category_id": 1,
-  "description": "Monthly salary",
+  "income_type_id": 1,
+  "income_category_id": 1,
+  "income_sub_category_id": 1,
   "date": "2025-05-01",
+  "description": "Monthly salary",
   "family_member_id": "1"
 }
 ```
@@ -290,9 +336,11 @@ Send a GET request to `http://localhost:3001/api/test` to test the database conn
 ```json
 {
   "amount": 5500,
-  "category_id": 1,
-  "description": "Updated monthly salary",
+  "income_type_id": 1,
+  "income_category_id": 1,
+  "income_sub_category_id": 1,
   "date": "2025-05-01",
+  "description": "Updated monthly salary",
   "family_member_id": "1"
 }
 ```
@@ -325,13 +373,40 @@ Send a GET request to `http://localhost:3001/api/test` to test the database conn
 ```json
 [
   {
-    "id": "1",
+    "id": 1,
     "amount": 100,
     "category": "Food",
-    "description": "Groceries",
+    "expense_type_id": 3,
+    "expense_category_id": 5,
+    "expense_sub_category_id": 7,
+    "expense_type_name": "Food",
+    "expense_category_name": "Groceries",
+    "expense_sub_category_name": "Groceries (Vegetables/Fruits)",
     "date": "2025-05-02",
+    "description": "Groceries",
     "family_member": "Self",
     "family_member_id": "1"
+  }
+]
+```
+
+### Get Expense Types
+- **URL**: `/api/expenses/types`
+- **Method**: `GET`
+- **Response**: Array of expense type objects
+```json
+[
+  {
+    "id": 1,
+    "name": "Housing"
+  },
+  {
+    "id": 2,
+    "name": "Transportation"
+  },
+  {
+    "id": 3,
+    "name": "Food"
   }
 ]
 ```
@@ -343,9 +418,11 @@ Send a GET request to `http://localhost:3001/api/test` to test the database conn
 ```json
 {
   "amount": 100,
-  "category": "Food",
-  "description": "Groceries",
+  "expense_type_id": 3,
+  "expense_category_id": 5,
+  "expense_sub_category_id": 7,
   "date": "2025-05-02",
+  "description": "Groceries",
   "family_member_id": "1"
 }
 ```
@@ -366,9 +443,11 @@ Send a GET request to `http://localhost:3001/api/test` to test the database conn
 ```json
 {
   "amount": 120,
-  "category": "Food",
-  "description": "Updated groceries",
+  "expense_type_id": 3,
+  "expense_category_id": 5,
+  "expense_sub_category_id": 7,
   "date": "2025-05-02",
+  "description": "Updated groceries",
   "family_member_id": "1"
 }
 ```
