@@ -1,20 +1,45 @@
 
 import { ResultSetHeader, RowDataPacket, OkPacket } from 'mysql2';
 
-// Define the types for MySQL query results
-export type QueryResult = RowDataPacket[] | RowDataPacket[][] | ResultSetHeader | ResultSetHeader[] | OkPacket | OkPacket[] | null;
+// Define the types for MySQL query results - updated to include tuple format
+export type QueryResult = 
+  | RowDataPacket[] 
+  | RowDataPacket[][] 
+  | ResultSetHeader 
+  | ResultSetHeader[] 
+  | OkPacket 
+  | OkPacket[] 
+  | [RowDataPacket[], ResultSetHeader]
+  | null;
 
 /**
  * Helper function to check if a query result is an array of rows
  */
 export const isResultArray = (result: QueryResult): result is RowDataPacket[] | RowDataPacket[][] => {
-  return Array.isArray(result);
+  if (!result) return false;
+  
+  // Handle the [rows, fields] format from mysql2
+  if (Array.isArray(result) && result.length === 2 && Array.isArray(result[0])) {
+    return true;
+  }
+  
+  // Handle direct array of rows
+  return Array.isArray(result) && (result.length === 0 || !('affectedRows' in result[0]));
 };
 
 /**
  * Enhanced helper function to safely get UUID from query result
  */
 export const getUuidFromResult = (result: QueryResult): string | null => {
+  // Handle tuple format [rows, fields]
+  if (Array.isArray(result) && result.length === 2 && Array.isArray(result[0])) {
+    const rows = result[0];
+    if (rows.length > 0 && rows[0] && 'id' in rows[0]) {
+      return String(rows[0].id);
+    }
+    return null;
+  }
+  
   // Handle case when result is an array with objects
   if (result && Array.isArray(result) && result.length > 0 && result[0] && 'id' in result[0]) {
     return String(result[0].id);
@@ -53,16 +78,19 @@ export const getUuidFromResult = (result: QueryResult): string | null => {
  * Safe function to get rows from a query result
  */
 export const getSafeRows = (result: QueryResult): any[] => {
-  // If result is directly an array (most common case)
-  if (Array.isArray(result)) {
-    return result;
+  // If result is null or undefined
+  if (!result) {
+    return [];
   }
   
   // Handle the [rows, fields] format from mysql2
-  if (Array.isArray(result) && result.length > 0) {
-    if (Array.isArray(result[0])) {
-      return result[0];
-    }
+  if (Array.isArray(result) && result.length === 2 && Array.isArray(result[0])) {
+    return result[0];
+  }
+  
+  // If result is directly an array (most common case)
+  if (Array.isArray(result)) {
+    return result;
   }
   
   // Return empty array as fallback
@@ -75,6 +103,18 @@ export const getSafeRows = (result: QueryResult): any[] => {
  */
 export const handleOkPacket = (result: QueryResult) => {
   if (!result) return { success: false, affectedRows: 0, insertId: null };
+  
+  // Handle tuple format [_, OkPacket] from mysql2
+  if (Array.isArray(result) && result.length === 2 && !Array.isArray(result[1])) {
+    const okPacket = result[1];
+    if (okPacket && typeof okPacket === 'object' && ('affectedRows' in okPacket || 'insertId' in okPacket)) {
+      return {
+        success: true,
+        affectedRows: okPacket.affectedRows || 0,
+        insertId: okPacket.insertId || null
+      };
+    }
+  }
   
   // Handle direct OkPacket
   if (result && typeof result === 'object' && !Array.isArray(result) && ('affectedRows' in result || 'insertId' in result)) {
