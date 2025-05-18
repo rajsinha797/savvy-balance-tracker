@@ -1,8 +1,8 @@
 
-import { ResultSetHeader, RowDataPacket } from 'mysql2';
+import { ResultSetHeader, RowDataPacket, OkPacket } from 'mysql2';
 
 // Define the types for MySQL query results
-export type QueryResult = RowDataPacket[] | RowDataPacket[][] | ResultSetHeader | ResultSetHeader[] | null;
+export type QueryResult = RowDataPacket[] | RowDataPacket[][] | ResultSetHeader | OkPacket | OkPacket[] | null;
 
 /**
  * Helper function to check if a query result is an array of rows
@@ -17,22 +17,22 @@ export const isResultArray = (result: QueryResult): result is RowDataPacket[] | 
 export const getUuidFromResult = (result: QueryResult): string | null => {
   // Handle case when result is an array with objects
   if (result && Array.isArray(result) && result.length > 0 && result[0] && 'id' in result[0]) {
-    return result[0].id;
+    return String(result[0].id);
   }
   
   // Handle case when result itself is an object with id (some queries return this format)
   if (result && typeof result === 'object' && !Array.isArray(result) && 'id' in result) {
-    return result.id;
+    return String(result.id);
   }
   
   // Handle OkPacket case that might have insertId
   if (result && typeof result === 'object' && !Array.isArray(result) && 'insertId' in result) {
-    return result.insertId.toString();
+    return String(result.insertId);
   }
   
   // For handling SELECT UUID() - in mysql2 the first element might be rows array, second is fields
   if (result && Array.isArray(result) && result.length >= 1 && Array.isArray(result[0]) && result[0].length > 0 && result[0][0] && 'id' in result[0][0]) {
-    return result[0][0].id;
+    return String(result[0][0].id);
   }
 
   // Another possible format for UUID() results
@@ -41,7 +41,7 @@ export const getUuidFromResult = (result: QueryResult): string | null => {
     if (firstRow && typeof firstRow === 'object') {
       const firstKey = Object.keys(firstRow)[0];
       if (firstKey) {
-        return firstRow[firstKey];
+        return String(firstRow[firstKey]);
       }
     }
   }

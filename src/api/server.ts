@@ -923,7 +923,7 @@ app.get('/api/budgets/:id', async (req: Request<ParamsDictionary>, res: Response
         WHERE date BETWEEN ? AND ?
       `, [startDate, endDate]);
       
-      expenses = expenseRows;
+      expenses = getSafeRows(expenseRows);
     }
     
     // Prepare the response
