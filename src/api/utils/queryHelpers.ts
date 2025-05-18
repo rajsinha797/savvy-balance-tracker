@@ -1,27 +1,32 @@
 
+import { ResultSetHeader, RowDataPacket } from 'mysql2';
+
+// Define the types for MySQL query results
+export type QueryResult = RowDataPacket[] | RowDataPacket[][] | ResultSetHeader | ResultSetHeader[] | null;
+
 /**
- * Helper function to check if a query result is an array
+ * Helper function to check if a query result is an array of rows
  */
-export const isResultArray = (result) => {
+export const isResultArray = (result: QueryResult): result is RowDataPacket[] | RowDataPacket[][] => {
   return Array.isArray(result);
 };
 
 /**
  * Enhanced helper function to safely get UUID from query result
  */
-export const getUuidFromResult = (result) => {
+export const getUuidFromResult = (result: QueryResult): string | null => {
   // Handle case when result is an array with objects
   if (result && Array.isArray(result) && result.length > 0 && result[0] && 'id' in result[0]) {
     return result[0].id;
   }
   
   // Handle case when result itself is an object with id (some queries return this format)
-  if (result && typeof result === 'object' && 'id' in result) {
+  if (result && typeof result === 'object' && !Array.isArray(result) && 'id' in result) {
     return result.id;
   }
   
   // Handle OkPacket case that might have insertId
-  if (result && typeof result === 'object' && 'insertId' in result) {
+  if (result && typeof result === 'object' && !Array.isArray(result) && 'insertId' in result) {
     return result.insertId.toString();
   }
   
@@ -33,9 +38,11 @@ export const getUuidFromResult = (result) => {
   // Another possible format for UUID() results
   if (result && Array.isArray(result) && result.length >= 1 && Array.isArray(result[0]) && result[0].length > 0) {
     const firstRow = result[0][0];
-    const firstKey = Object.keys(firstRow)[0];
-    if (firstKey) {
-      return firstRow[firstKey];
+    if (firstRow && typeof firstRow === 'object') {
+      const firstKey = Object.keys(firstRow)[0];
+      if (firstKey) {
+        return firstRow[firstKey];
+      }
     }
   }
   
@@ -43,10 +50,9 @@ export const getUuidFromResult = (result) => {
 };
 
 /**
- * Safe function to check if a query returned rows and get them
- * This helps with TypeScript compatibility for mysql2 results
+ * Safe function to get rows from a query result
  */
-export const getSafeRows = (result) => {
+export const getSafeRows = (result: QueryResult): any[] => {
   // If result is directly an array (most common case)
   if (Array.isArray(result)) {
     return result;
@@ -67,11 +73,11 @@ export const getSafeRows = (result) => {
  * Helper function to safely handle OkPacket results
  * OkPacket is returned for INSERT, UPDATE, DELETE operations
  */
-export const handleOkPacket = (result) => {
+export const handleOkPacket = (result: QueryResult) => {
   if (!result) return { success: false, affectedRows: 0, insertId: null };
   
   // Handle direct OkPacket
-  if (typeof result === 'object' && ('affectedRows' in result || 'insertId' in result)) {
+  if (result && typeof result === 'object' && !Array.isArray(result) && ('affectedRows' in result || 'insertId' in result)) {
     return {
       success: true,
       affectedRows: result.affectedRows || 0,

@@ -10,6 +10,7 @@ import familyRoutes from './familyRoutes.js';
 import familyMemberRoutes from './familyMemberRoutes.js';
 import reportRoutes from './reportRoutes.js';
 import * as expenseCategoryController from '../controllers/expenseCategoryController.js';
+import { getSafeRows } from '../utils/queryHelpers.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -33,7 +34,8 @@ router.get('/docs', (req, res) => {
 router.get('/test', async (req, res) => {
   try {
     const pool = (await import('../db/db.js')).default;
-    const [rows] = await pool.query('SELECT 1 as test');
+    const [result] = await pool.query('SELECT 1 as test');
+    const rows = getSafeRows(result);
     res.json({ status: 'success', message: 'Database connected successfully', data: rows });
   } catch (error) {
     console.error('Database connection error:', error);

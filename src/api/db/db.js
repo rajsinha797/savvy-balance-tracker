@@ -19,6 +19,7 @@ async function testConnection() {
   try {
     const [rows] = await pool.query('SELECT 1 as test');
     console.log('Database connection established successfully');
+    return true;
   } catch (error) {
     console.error('Error connecting to database:', error.message);
     
@@ -39,13 +40,14 @@ async function testConnection() {
       await tempPool.end();
       
       console.log('Please run the setup-database.sql script to initialize the schema.');
+      return false;
     } catch (createError) {
       console.error('Failed to create database:', createError.message);
+      return false;
     }
   }
 }
 
-// Call test connection function (comment out in production)
-testConnection();
-
+// Export both the pool and the test connection function
+export { testConnection };
 export default pool;
