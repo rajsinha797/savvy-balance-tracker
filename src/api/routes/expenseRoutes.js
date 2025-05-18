@@ -13,6 +13,7 @@ router.delete('/:id', expenseController.deleteExpense);
 
 // Expense category endpoints
 router.get('/categories', expenseController.getExpenseCategories);
+router.get('/wallets', expenseController.getAvailableWallets);
 
 // Expense categorization endpoints
 router.get('/types', expenseCategoryController.getAllExpenseTypes);

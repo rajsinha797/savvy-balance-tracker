@@ -9,6 +9,7 @@ router.get('/categories', incomeController.getAllIncomeCategories);
 router.get('/types', incomeController.getAllIncomeTypes);
 router.get('/categories/by-type/:typeId', incomeController.getCategoriesByType);
 router.get('/subcategories/by-category/:categoryId', incomeController.getSubcategoriesByCategory);
+router.get('/wallets', incomeController.getAvailableWallets);
 router.get('/', incomeController.getAllIncomes);
 router.get('/:id', incomeController.getIncomeById);
 router.post('/', incomeController.createIncome);

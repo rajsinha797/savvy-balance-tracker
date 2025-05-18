@@ -10,7 +10,8 @@ import {
   Settings, 
   User,
   Users,
-  LogOut
+  LogOut,
+  CreditCard
 } from 'lucide-react';
 
 type SidebarItem = {
@@ -34,14 +35,19 @@ const Sidebar = () => {
       icon: <Users className="h-5 w-5" /> 
     },
     { 
-      name: 'Income', 
-      path: '/income',
-      icon: <DollarSign className="h-5 w-5" /> 
+      name: 'Wallet', 
+      path: '/wallet',
+      icon: <CreditCard className="h-5 w-5" /> 
     },
     { 
       name: 'Budget', 
       path: '/budget',
       icon: <PieChart className="h-5 w-5" />
+    },
+    { 
+      name: 'Income', 
+      path: '/income',
+      icon: <DollarSign className="h-5 w-5" /> 
     },
     { 
       name: 'Expenses', 

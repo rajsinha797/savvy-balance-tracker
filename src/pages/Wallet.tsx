@@ -1,0 +1,253 @@
+
+import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Plus } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Wallet, formatDateForDisplay } from '@/services/walletService';
+
+// Import components
+import WalletSummary from '@/components/wallet/WalletSummary';
+import WalletForm from '@/components/wallet/WalletForm';
+import WalletList from '@/components/wallet/WalletList';
+import FamilyFilter from '@/components/income/FamilyFilter';
+
+// Import custom hooks
+import { useWalletApi } from '@/hooks/useWalletApi';
+import { useFamilyApi } from '@/hooks/useFamilyApi';
+
+const WalletPage = () => {
+  const [selectedFamilyMember, setSelectedFamilyMember] = useState<string>("all-members");
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  
+  // Use our custom hooks
+  const { familyMembers } = useFamilyApi();
+  const { 
+    wallets, 
+    walletTypes, 
+    getWalletCategoriesByType,
+    getWalletSubCategoriesByCategory,
+    isLoading,
+    createWallet: addWallet,
+    updateWallet: updateWalletItem,
+    deleteWallet: deleteWalletItem
+  } = useWalletApi(selectedFamilyMember !== 'all-members' ? selectedFamilyMember : undefined);
+  
+  // New wallet form data state
+  const [newWallet, setNewWallet] = useState<{ 
+    name: string;
+    amount: number; 
+    wallet_type_id: number;
+    wallet_category_id: number;
+    wallet_sub_category_id: number | null;
+    description: string; 
+    date: string;
+    family_member_id: string;
+  }>({ 
+    name: '',
+    amount: 0, 
+    wallet_type_id: 0,
+    wallet_category_id: 0,
+    wallet_sub_category_id: null, 
+    description: '', 
+    date: new Date().toISOString().split('T')[0],
+    family_member_id: '' 
+  });
+  
+  // State for editing wallet
+  const [editingWallet, setEditingWallet] = useState<(Wallet & { 
+    wallet_type_id: number,
+    wallet_category_id: number,
+    wallet_sub_category_id: number | null, 
+    family_member_id: string 
+  }) | null>(null);
+
+  // Set default family member when family members data is loaded
+  React.useEffect(() => {
+    if (familyMembers.length > 0) {
+      const defaultMember = familyMembers.find(member => member.is_default);
+      if (defaultMember) {
+        setNewWallet(prev => ({ ...prev, family_member_id: String(defaultMember.id) }));
+      }
+    }
+  }, [familyMembers]);
+
+  // Calculate totals by wallet type
+  const calculateTotalsByType = () => {
+    const spendingTotal = wallets
+      .filter(wallet => wallet.wallet_type_id === 1)
+      .reduce((sum, wallet) => sum + Number(wallet.amount), 0);
+      
+    const savingsTotal = wallets
+      .filter(wallet => wallet.wallet_type_id === 2)
+      .reduce((sum, wallet) => sum + Number(wallet.amount), 0);
+      
+    const debtTotal = wallets
+      .filter(wallet => wallet.wallet_type_id === 3)
+      .reduce((sum, wallet) => sum + Number(wallet.amount), 0);
+      
+    return { spendingTotal, savingsTotal, debtTotal };
+  };
+  
+  const { spendingTotal, savingsTotal, debtTotal } = calculateTotalsByType();
+
+  const handleFamilyMemberChange = (value: string) => {
+    setSelectedFamilyMember(value);
+  };
+  
+  // Handle form submits
+  const handleAddWallet = () => {
+    if (newWallet.amount <= 0 || !newWallet.wallet_type_id || !newWallet.wallet_category_id || !newWallet.name) {
+      return;
+    }
+    addWallet(newWallet);
+    setNewWallet({ 
+      name: '',
+      amount: 0, 
+      wallet_type_id: 0,
+      wallet_category_id: 0,
+      wallet_sub_category_id: null,
+      description: '', 
+      date: new Date().toISOString().split('T')[0],
+      family_member_id: newWallet.family_member_id
+    });
+    setIsDialogOpen(false);
+  };
+
+  const handleEditWallet = () => {
+    if (!editingWallet || !editingWallet.name || editingWallet.amount <= 0 || !editingWallet.wallet_type_id || !editingWallet.wallet_category_id) {
+      return;
+    }
+    
+    const { 
+      id, 
+      name,
+      amount, 
+      wallet_type_id, 
+      wallet_category_id, 
+      wallet_sub_category_id, 
+      description, 
+      date, 
+      family_member_id 
+    } = editingWallet;
+    
+    updateWalletItem({
+      id,
+      wallet: {
+        name,
+        amount,
+        wallet_type_id,
+        wallet_category_id,
+        wallet_sub_category_id,
+        description,
+        date,
+        family_member_id
+      }
+    });
+    
+    setEditingWallet(null);
+    setIsDialogOpen(false);
+  };
+
+  const handleDeleteWallet = (id: string | number) => {
+    deleteWalletItem(id);
+  };
+
+  // Find family member name by ID
+  const getFamilyMemberName = (id?: string) => {
+    if (!id) return null;
+    const member = familyMembers.find(m => m.id === id);
+    return member ? member.name : null;
+  };
+
+  const selectedFamilyMemberName = selectedFamilyMember !== 'all-members'
+    ? getFamilyMemberName(selectedFamilyMember)
+    : null;
+    
+  // Handlers for form changes
+  const handleNewWalletChange = (field: string, value: string | number | null) => {
+    setNewWallet(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleEditingWalletChange = (field: string, value: string | number | null) => {
+    if (editingWallet) {
+      setEditingWallet(prev => {
+        if (prev) {
+          return { ...prev, [field]: value };
+        }
+        return prev;
+      });
+    }
+  };
+
+  const startEditWallet = (wallet: Wallet) => {
+    // Format date for the form
+    const formattedWallet = {
+      ...wallet,
+      date: formatDateForDisplay(wallet.date),
+      wallet_type_id: wallet.wallet_type_id || 0,
+      wallet_category_id: wallet.wallet_category_id || 0,
+      wallet_sub_category_id: wallet.wallet_sub_category_id || null,
+      family_member_id: wallet.family_member_id || ''
+    };
+    
+    setEditingWallet(formattedWallet);
+    setIsDialogOpen(true);
+  };
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold">Wallet Management</h2>
+        
+        <div className="flex gap-2">
+          <FamilyFilter 
+            selectedFamilyMember={selectedFamilyMember}
+            familyMembers={familyMembers}
+            onFamilyMemberChange={handleFamilyMemberChange}
+          />
+          
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-fintrack-purple hover:bg-fintrack-purple/90">
+                <Plus className="h-4 w-4 mr-2" /> Add Wallet
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="bg-fintrack-card-dark border border-fintrack-bg-dark">
+              <DialogHeader>
+                <DialogTitle>{editingWallet ? 'Edit Wallet' : 'Add New Wallet'}</DialogTitle>
+              </DialogHeader>
+              <WalletForm 
+                isEditing={!!editingWallet}
+                formData={editingWallet || newWallet}
+                onFormChange={editingWallet ? handleEditingWalletChange : handleNewWalletChange}
+                onSubmit={editingWallet ? handleEditWallet : handleAddWallet}
+                walletTypes={walletTypes}
+                getWalletCategoriesByType={getWalletCategoriesByType}
+                getWalletSubCategoriesByCategory={getWalletSubCategoriesByCategory}
+                familyMembers={familyMembers}
+              />
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
+      
+      {/* Wallet Summary - Top section */}
+      <WalletSummary 
+        totalSpending={spendingTotal}
+        totalSavings={savingsTotal}
+        totalDebt={debtTotal}
+        selectedFamilyMemberName={selectedFamilyMemberName}
+      />
+      
+      {/* Wallet Entries - Bottom section */}
+      <WalletList 
+        wallets={wallets}
+        isLoading={isLoading}
+        onEditWallet={startEditWallet}
+        onDeleteWallet={handleDeleteWallet}
+      />
+    </div>
+  );
+};
+
+export default WalletPage;
