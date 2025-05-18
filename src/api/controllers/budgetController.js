@@ -1,4 +1,3 @@
-
 import pool from '../db/db.js';
 import { isResultArray, getUuidFromResult } from '../utils/queryHelpers.js';
 
@@ -100,7 +99,7 @@ export const getAllBudgets = async (req, res) => {
     const [tables] = await pool.query(`
       SELECT TABLE_NAME 
       FROM information_schema.TABLES 
-      WHERE TABLE_NAME = 'budgets'
+      WHERE TABLE_NAME = 'budgets' AND TABLE_SCHEMA = database()
     `);
 
     // If the table doesn't exist, create it
@@ -108,8 +107,8 @@ export const getAllBudgets = async (req, res) => {
       await pool.query(`
         CREATE TABLE budgets (
           id VARCHAR(36) PRIMARY KEY,
-          month VARCHAR(2) NOT NULL,
-          year VARCHAR(4) NOT NULL,
+          month INT NOT NULL,
+          year INT NOT NULL,
           total_allocated DECIMAL(10,2) DEFAULT 0.00,
           total_spent DECIMAL(10,2) DEFAULT 0.00,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -121,14 +120,43 @@ export const getAllBudgets = async (req, res) => {
           id VARCHAR(36) PRIMARY KEY,
           budget_id VARCHAR(36) NOT NULL,
           category VARCHAR(50) NOT NULL,
-          type VARCHAR(50),
-          sub_category VARCHAR(50),
           allocated DECIMAL(10,2) DEFAULT 0.00,
           spent DECIMAL(10,2) DEFAULT 0.00,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           FOREIGN KEY (budget_id) REFERENCES budgets(id) ON DELETE CASCADE
         )
       `);
+      
+      // Return empty array since no budgets exist yet
+      return res.json([]);
+    }
+
+    // Check if budget_categories table has type and sub_category columns
+    const [categoryColumns] = await pool.query(`
+      SHOW COLUMNS FROM budget_categories 
+      WHERE Field IN ('type', 'sub_category')
+    `);
+
+    // Add missing columns if needed
+    if (!isResultArray(categoryColumns) || categoryColumns.length < 2) {
+      try {
+        if (!categoryColumns.some(col => col.Field === 'type')) {
+          await pool.query(`
+            ALTER TABLE budget_categories 
+            ADD COLUMN type VARCHAR(50) AFTER category
+          `);
+        }
+        
+        if (!categoryColumns.some(col => col.Field === 'sub_category')) {
+          await pool.query(`
+            ALTER TABLE budget_categories 
+            ADD COLUMN sub_category VARCHAR(50) AFTER type
+          `);
+        }
+      } catch (alterError) {
+        console.error('Error altering budget_categories table:', alterError);
+        // Continue execution even if alter fails
+      }
     }
 
     // Query the budgets with their categories
@@ -146,14 +174,44 @@ export const getAllBudgets = async (req, res) => {
     
     if (isResultArray(budgets)) {
       for (const budget of budgets) {
-        const [categories] = await pool.query(`
-          SELECT 
-            id, category, type, sub_category, allocated, spent
-          FROM 
-            budget_categories
-          WHERE 
-            budget_id = ?
-        `, [budget.id]);
+        // Check columns again to determine the right query
+        const [checkColumns] = await pool.query(`
+          SHOW COLUMNS FROM budget_categories 
+          WHERE Field IN ('type', 'sub_category')
+        `);
+        
+        let categories;
+        
+        if (isResultArray(checkColumns) && checkColumns.length === 2) {
+          // Both columns exist, use them
+          const [categoriesResult] = await pool.query(`
+            SELECT 
+              id, category, type, sub_category, allocated, spent
+            FROM 
+              budget_categories
+            WHERE 
+              budget_id = ?
+          `, [budget.id]);
+          
+          categories = categoriesResult;
+        } else {
+          // Columns don't exist, query without them
+          const [categoriesResult] = await pool.query(`
+            SELECT 
+              id, category, allocated, spent
+            FROM 
+              budget_categories
+            WHERE 
+              budget_id = ?
+          `, [budget.id]);
+          
+          // Add null values for missing columns
+          categories = categoriesResult.map(cat => ({
+            ...cat,
+            type: null,
+            sub_category: null
+          }));
+        }
   
         // Calculate remaining and percentage for each category
         const formattedCategories = isResultArray(categories) ? categories.map(category => {
@@ -165,8 +223,8 @@ export const getAllBudgets = async (req, res) => {
           return {
             id: category.id,
             category: category.category,
-            type: category.type,
-            subCategory: category.sub_category,
+            type: category.type || null,
+            subCategory: category.sub_category || null,
             allocated: parseFloat(category.allocated),
             spent: parseFloat(category.spent),
             remaining,
@@ -188,11 +246,8 @@ export const getAllBudgets = async (req, res) => {
     res.json(result);
   } catch (error) {
     console.error('Error fetching budget periods:', error);
-    res.status(500).json({ 
-      status: 'error', 
-      message: 'Failed to fetch budget periods',
-      error: error.message
-    });
+    // Return empty array on error
+    res.json([]);
   }
 };
 

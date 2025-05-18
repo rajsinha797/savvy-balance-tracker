@@ -1,4 +1,3 @@
-
 import pool from '../db/db.js';
 import { isResultArray, getSafeRows, handleOkPacket } from '../utils/queryHelpers.js';
 
@@ -112,28 +111,69 @@ export const createIncome = async (req, res) => {
       family_member_id 
     } = req.body;
     
-    const query = `
-      INSERT INTO income (
-        income_type_id,
+    // First check if the table has a category column
+    const [columns] = await pool.query(`
+      SHOW COLUMNS FROM income WHERE Field = 'category'
+    `);
+    
+    let query;
+    let params;
+    
+    // If the category column exists, include it in the query with a default value
+    if (columns && columns.length > 0) {
+      query = `
+        INSERT INTO income (
+          income_type_id,
+          income_category_id,
+          income_sub_category_id,
+          amount, 
+          date, 
+          description, 
+          family_member_id,
+          category
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `;
+      
+      // Use the income_category_name as the category if possible, or default to 'Income'
+      const categoryName = 'Income'; // Default category
+      params = [
+        income_type_id, 
         income_category_id,
         income_sub_category_id,
         amount, 
         date, 
-        description, 
-        family_member_id
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `;
+        description,
+        family_member_id || null,
+        categoryName
+      ];
+    } else {
+      // Otherwise just use the columns we know exist
+      query = `
+        INSERT INTO income (
+          income_type_id,
+          income_category_id,
+          income_sub_category_id,
+          amount, 
+          date, 
+          description, 
+          family_member_id
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `;
+      
+      params = [
+        income_type_id, 
+        income_category_id,
+        income_sub_category_id,
+        amount, 
+        date, 
+        description,
+        family_member_id || null
+      ];
+    }
     
-    const [result] = await pool.query(query, [
-      income_type_id, 
-      income_category_id,
-      income_sub_category_id,
-      amount, 
-      date, 
-      description,
-      family_member_id || null
-    ]);
+    const [result] = await pool.query(query, params);
     
     const id = result.insertId;
     

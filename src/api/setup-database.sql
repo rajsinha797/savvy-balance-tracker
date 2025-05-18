@@ -13,6 +13,15 @@ DROP TABLE IF EXISTS income_categories;
 DROP TABLE IF EXISTS budget_categories;
 DROP TABLE IF EXISTS budgets;
 DROP TABLE IF EXISTS family_members;
+DROP TABLE IF EXISTS family;
+
+-- Create family table
+CREATE TABLE family (
+  family_id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
 
 -- Create family_members table
 CREATE TABLE family_members (
@@ -101,12 +110,14 @@ CREATE TABLE budget_categories (
   id VARCHAR(36) PRIMARY KEY,
   budget_id VARCHAR(36) NOT NULL,
   category VARCHAR(100) NOT NULL,
+  type VARCHAR(50) NULL,
+  sub_category VARCHAR(50) NULL,
   allocated DECIMAL(10, 2) NOT NULL DEFAULT 0,
   spent DECIMAL(10, 2) NOT NULL DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (budget_id) REFERENCES budgets(id) ON DELETE CASCADE,
-  UNIQUE KEY (budget_id, category)
+  UNIQUE KEY (budget_id, category, type, sub_category)
 );
 
 -- Create income table with the new categorization fields
@@ -116,6 +127,7 @@ CREATE TABLE income (
   income_type_id INT,
   income_category_id INT,
   income_sub_category_id INT,
+  category VARCHAR(100) DEFAULT 'Income',
   date DATE NOT NULL,
   description TEXT,
   family_member_id VARCHAR(36),
@@ -134,6 +146,7 @@ CREATE TABLE expenses (
   expense_type_id INT,
   expense_category_id INT,
   expense_sub_category_id INT,
+  category VARCHAR(100) DEFAULT 'Expense',
   date DATE NOT NULL,
   description TEXT,
   family_member_id VARCHAR(36),
@@ -144,6 +157,9 @@ CREATE TABLE expenses (
   FOREIGN KEY (expense_category_id) REFERENCES expense_category(id) ON DELETE SET NULL,
   FOREIGN KEY (expense_sub_category_id) REFERENCES expense_sub_category(id) ON DELETE SET NULL
 );
+
+-- Insert default family
+INSERT INTO family (family_id, name) VALUES (1, 'Default Family');
 
 -- Insert sample family members
 INSERT INTO family_members (id, name, relation) VALUES 
@@ -235,17 +251,17 @@ INSERT INTO expense_categories (name) VALUES
 ('Miscellaneous');
 
 -- Insert sample income records
-INSERT INTO income (amount, income_type_id, income_category_id, income_sub_category_id, date, description, family_member_id) VALUES 
-(50000, 1, 1, 1, '2023-05-01', 'May Salary', '1'),
-(25000, 1, 1, 2, '2023-05-01', 'Part-time job', '2'),
-(10000, 1, 1, 1, '2023-05-10', 'Website development project', '1'),
-(5000, 3, 4, 4, '2023-05-15', 'Dividend income', '1'),
-(8000, 1, 1, 2, '2023-05-20', 'Apartment rent', '2');
+INSERT INTO income (amount, income_type_id, income_category_id, income_sub_category_id, category, date, description, family_member_id) VALUES 
+(50000, 1, 1, 1, 'Salary', '2023-05-01', 'May Salary', '1'),
+(25000, 1, 1, 2, 'Salary', '2023-05-01', 'Part-time job', '2'),
+(10000, 1, 1, 1, 'Salary', '2023-05-10', 'Website development project', '1'),
+(5000, 3, 4, 4, 'Investment', '2023-05-15', 'Dividend income', '1'),
+(8000, 1, 1, 2, 'Salary', '2023-05-20', 'Apartment rent', '2');
 
 -- Insert sample expenses
-INSERT INTO expenses (amount, expense_type_id, expense_category_id, expense_sub_category_id, date, description, family_member_id) VALUES
-(15000, 1, 1, 1, '2023-05-05', 'May rent', '1'),
-(3500, 1, 2, 3, '2023-05-10', 'Electricity bill', '2'),
-(1200, 2, 3, 5, '2023-05-15', 'Petrol', '1'),
-(2500, 3, 5, 7, '2023-05-18', 'Weekly groceries', '2'),
-(1800, 3, 6, 8, '2023-05-20', 'Dinner at restaurant', '1');
+INSERT INTO expenses (amount, expense_type_id, expense_category_id, expense_sub_category_id, category, date, description, family_member_id) VALUES
+(15000, 1, 1, 1, 'Housing', '2023-05-05', 'May rent', '1'),
+(3500, 1, 2, 3, 'Utilities', '2023-05-10', 'Electricity bill', '2'),
+(1200, 2, 3, 5, 'Transportation', '2023-05-15', 'Petrol', '1'),
+(2500, 3, 5, 7, 'Food', '2023-05-18', 'Weekly groceries', '2'),
+(1800, 3, 6, 8, 'Food', '2023-05-20', 'Dinner at restaurant', '1');

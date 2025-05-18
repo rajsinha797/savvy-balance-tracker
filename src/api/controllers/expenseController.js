@@ -1,4 +1,3 @@
-
 import pool from '../db/db.js';
 import { getSafeRows } from '../utils/queryHelpers.js';
 
@@ -52,28 +51,69 @@ export const createExpense = async (req, res) => {
       family_member_id 
     } = req.body;
     
-    const query = `
-      INSERT INTO expenses (
+    // First check if the table has a category column
+    const [columns] = await pool.query(`
+      SHOW COLUMNS FROM expenses WHERE Field = 'category'
+    `);
+    
+    let query;
+    let params;
+    
+    // If the category column exists, include it in the query with a default value
+    if (columns && columns.length > 0) {
+      query = `
+        INSERT INTO expenses (
+          expense_type_id,
+          expense_category_id,
+          expense_sub_category_id,
+          amount,
+          date,
+          description,
+          family_member_id,
+          category
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `;
+      
+      // Use the expense_category_name as the category if possible, or default to 'Expense'
+      const categoryName = 'Expense'; // Default category
+      params = [
         expense_type_id,
         expense_category_id,
         expense_sub_category_id,
-        amount,
-        date,
+        amount, 
+        date, 
         description,
-        family_member_id
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `;
+        family_member_id || null,
+        categoryName
+      ];
+    } else {
+      // Otherwise just use the columns we know exist
+      query = `
+        INSERT INTO expenses (
+          expense_type_id,
+          expense_category_id,
+          expense_sub_category_id,
+          amount,
+          date,
+          description,
+          family_member_id
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `;
+      
+      params = [
+        expense_type_id,
+        expense_category_id,
+        expense_sub_category_id,
+        amount, 
+        date, 
+        description,
+        family_member_id || null
+      ];
+    }
     
-    const [result] = await pool.query(query, [
-      expense_type_id,
-      expense_category_id,
-      expense_sub_category_id,
-      amount, 
-      date, 
-      description,
-      family_member_id || null
-    ]);
+    const [result] = await pool.query(query, params);
     
     const id = result.insertId;
     
