@@ -1,362 +1,369 @@
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { MoreVertical, Plus, Edit, Trash, Star, Edit3, CheckCircle } from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-} from '@/components/ui/alert';
+import { Plus, Edit, Trash2 } from 'lucide-react';
 import { useFamilyApi } from '@/hooks/useFamilyApi';
-import { FamilyMember } from '@/services/familyService';
+import { Family, FamilyMember } from '@/services/familyService';
 
-const FamilyMembers = () => {
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isSetDefaultDialogOpen, setIsSetDefaultDialogOpen] = useState(false);
+const FamilyMembersPage = () => {
+  // States for dialog visibility
+  const [isAddFamilyDialogOpen, setIsAddFamilyDialogOpen] = useState(false);
+  const [isEditFamilyDialogOpen, setIsEditFamilyDialogOpen] = useState(false);
+  const [isAddMemberDialogOpen, setIsAddMemberDialogOpen] = useState(false);
+  const [isEditMemberDialogOpen, setIsEditMemberDialogOpen] = useState(false);
+  
+  // States for form data
+  const [newFamilyName, setNewFamilyName] = useState('');
+  const [editFamilyName, setEditFamilyName] = useState('');
+  const [editFamilyId, setEditFamilyId] = useState<number>(0);
+  
   const [newMemberName, setNewMemberName] = useState('');
-  const [newRelation, setNewRelation] = useState('');
-  const [editingMember, setEditingMember] = useState<FamilyMember | null>(null);
-  const [deletingMemberId, setDeletingMemberId] = useState<string | null>(null);
-  const [defaultMemberId, setDefaultMemberId] = useState<string | null>(null);
-
-  const {
-    familyMembers,
-    isLoading,
-    addFamilyMember,
-    updateFamilyMember,
+  const [newMemberRelationship, setNewMemberRelationship] = useState('');
+  const [editMemberId, setEditMemberId] = useState<string>('');
+  const [editMemberName, setEditMemberName] = useState('');
+  const [editMemberRelationship, setEditMemberRelationship] = useState('');
+  
+  // Get family data using custom hook
+  const { 
+    families, 
+    familyMembers, 
+    currentFamilyId, 
+    switchFamily, 
+    addFamily, 
+    updateFamily, 
+    deleteFamily,
+    addFamilyMember, 
+    updateFamilyMember, 
     deleteFamilyMember,
-    setDefaultFamilyMember
+    setDefaultFamilyMember,
+    refreshData
   } = useFamilyApi();
-
-  useEffect(() => {
-    // Check if there is a default member when family members load
-    if (familyMembers.length > 0) {
-      const defaultMember = familyMembers.find(member => member.is_default);
-      if (defaultMember) {
-        setDefaultMemberId(String(defaultMember.id));
-      }
+  
+  // Handle family form submits
+  const handleAddFamily = async () => {
+    if (newFamilyName.trim() !== '') {
+      await addFamily(newFamilyName);
+      setNewFamilyName('');
+      setIsAddFamilyDialogOpen(false);
     }
-  }, [familyMembers]);
-
-  const handleAddMember = () => {
-    if (!newMemberName) return;
-
-    addFamilyMember({
-      name: newMemberName,
-      relation: newRelation || 'Other',
-      is_default: familyMembers.length === 0 // Make first member default if none exists
-    });
-
-    // Reset form
-    setNewMemberName('');
-    setNewRelation('');
-    setIsAddDialogOpen(false);
   };
-
-  const handleEditMember = () => {
-    if (!editingMember || !editingMember.name) return;
-
-    updateFamilyMember(String(editingMember.id), {
-      name: editingMember.name,
-      relation: editingMember.relation || 'Other'
-    });
-
-    // Reset form
-    setEditingMember(null);
-    setIsEditDialogOpen(false);
+  
+  const handleEditFamily = async () => {
+    if (editFamilyName.trim() !== '' && editFamilyId) {
+      await updateFamily(editFamilyId, editFamilyName);
+      setIsEditFamilyDialogOpen(false);
+    }
   };
-
-  const handleDeleteMember = () => {
-    if (!deletingMemberId) return;
-
-    deleteFamilyMember(deletingMemberId);
-    setDeletingMemberId(null);
-    setIsDeleteDialogOpen(false);
+  
+  const handleDeleteFamily = async (id: number) => {
+    if (confirm('Are you sure you want to delete this family? This action cannot be undone.')) {
+      await deleteFamily(id);
+    }
   };
-
-  const handleSetDefaultMember = () => {
-    if (!defaultMemberId) return;
-
-    setDefaultFamilyMember(defaultMemberId);
-    setIsSetDefaultDialogOpen(false);
+  
+  // Handle member form submits
+  const handleAddFamilyMember = async () => {
+    if (newMemberName.trim() !== '' && newMemberRelationship.trim() !== '') {
+      await addFamilyMember({
+        name: newMemberName,
+        relationship: newMemberRelationship,
+        family_id: currentFamilyId
+      });
+      setNewMemberName('');
+      setNewMemberRelationship('');
+      setIsAddMemberDialogOpen(false);
+    }
   };
-
-  const openEditDialog = (member: FamilyMember) => {
-    setEditingMember(member);
-    setIsEditDialogOpen(true);
+  
+  const handleEditFamilyMember = async () => {
+    if (editMemberName.trim() !== '' && editMemberRelationship.trim() !== '' && editMemberId) {
+      await updateFamilyMember(editMemberId, {
+        name: editMemberName,
+        relationship: editMemberRelationship
+      });
+      setIsEditMemberDialogOpen(false);
+    }
   };
-
-  const openDeleteDialog = (memberId: string) => {
-    setDeletingMemberId(memberId);
-    setIsDeleteDialogOpen(true);
+  
+  const handleDeleteFamilyMember = async (id: string) => {
+    if (confirm('Are you sure you want to delete this family member? This action cannot be undone.')) {
+      await deleteFamilyMember(id);
+    }
   };
-
-  const openSetDefaultDialog = (memberId: string) => {
-    setDefaultMemberId(memberId);
-    setIsSetDefaultDialogOpen(true);
+  
+  const handleSetDefault = async (id: string) => {
+    await setDefaultFamilyMember(id);
   };
-
+  
+  const openEditFamilyDialog = (family: Family) => {
+    setEditFamilyId(family.family_id);
+    setEditFamilyName(family.name);
+    setIsEditFamilyDialogOpen(true);
+  };
+  
+  const openEditMemberDialog = (member: FamilyMember) => {
+    setEditMemberId(member.id);
+    setEditMemberName(member.name);
+    setEditMemberRelationship(member.relationship);
+    setIsEditMemberDialogOpen(true);
+  };
+  
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Family Members</h1>
-
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <h2 className="text-2xl font-bold">Family Management</h2>
+        
+        <Dialog open={isAddFamilyDialogOpen} onOpenChange={setIsAddFamilyDialogOpen}>
           <DialogTrigger asChild>
             <Button className="bg-fintrack-purple hover:bg-fintrack-purple/90">
-              <Plus className="mr-2 h-4 w-4" /> Add Family Member
+              <Plus className="h-4 w-4 mr-2" /> Add Family
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="bg-fintrack-card-dark border border-fintrack-bg-dark">
+            <DialogHeader>
+              <DialogTitle>Add New Family</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right" htmlFor="name">
+                  Name
+                </Label>
+                <Input
+                  id="family-name"
+                  className="col-span-3"
+                  value={newFamilyName}
+                  onChange={(e) => setNewFamilyName(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="flex justify-end">
+              <Button onClick={handleAddFamily}>Add Family</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+      
+      {/* Families list */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Families</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            {families.length === 0 ? (
+              <p className="text-muted-foreground text-center py-4">No families found. Add a family to get started.</p>
+            ) : (
+              families.map((family) => (
+                <div 
+                  key={family.family_id}
+                  className={`flex justify-between items-center p-3 rounded-lg ${
+                    currentFamilyId === family.family_id ? 'bg-fintrack-bg-dark' : 'hover:bg-fintrack-bg-dark/50'
+                  }`}
+                  onClick={() => switchFamily(family.family_id)}
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className="font-medium">{family.name}</div>
+                    {currentFamilyId === family.family_id && (
+                      <span className="bg-fintrack-purple/20 text-fintrack-purple text-xs py-0.5 px-2 rounded">Current</span>
+                    )}
+                  </div>
+                  
+                  <div className="flex space-x-1">
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openEditFamilyDialog(family);
+                      }}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteFamily(family.family_id);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </CardContent>
+      </Card>
+      
+      {/* Edit family dialog */}
+      <Dialog open={isEditFamilyDialogOpen} onOpenChange={setIsEditFamilyDialogOpen}>
+        <DialogContent className="bg-fintrack-card-dark border border-fintrack-bg-dark">
+          <DialogHeader>
+            <DialogTitle>Edit Family</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right" htmlFor="edit-family-name">
+                Name
+              </Label>
+              <Input
+                id="edit-family-name"
+                className="col-span-3"
+                value={editFamilyName}
+                onChange={(e) => setEditFamilyName(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="flex justify-end">
+            <Button onClick={handleEditFamily}>Update Family</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Family Members section */}
+      <div className="flex justify-between items-center mt-8">
+        <h3 className="text-xl font-medium">Family Members</h3>
+        
+        <Dialog open={isAddMemberDialogOpen} onOpenChange={setIsAddMemberDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="h-4 w-4 mr-2" /> Add Member
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="bg-fintrack-card-dark border border-fintrack-bg-dark">
             <DialogHeader>
               <DialogTitle>Add New Family Member</DialogTitle>
-              <DialogDescription>Create a new family member profile.</DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Name</Label>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right" htmlFor="name">
+                  Name
+                </Label>
                 <Input
-                  id="name"
-                  placeholder="Enter name"
+                  id="member-name"
+                  className="col-span-3"
                   value={newMemberName}
                   onChange={(e) => setNewMemberName(e.target.value)}
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="relation">Relation</Label>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right" htmlFor="relationship">
+                  Relationship
+                </Label>
                 <Input
-                  id="relation"
-                  placeholder="E.g., Spouse, Child, Parent"
-                  value={newRelation}
-                  onChange={(e) => setNewRelation(e.target.value)}
+                  id="member-relationship"
+                  className="col-span-3"
+                  value={newMemberRelationship}
+                  onChange={(e) => setNewMemberRelationship(e.target.value)}
+                  placeholder="e.g. Self, Spouse, Child"
                 />
               </div>
             </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setIsAddDialogOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                className="bg-fintrack-purple hover:bg-fintrack-purple/90"
-                onClick={handleAddMember}
-              >
-                Add Member
-              </Button>
-            </DialogFooter>
+            <div className="flex justify-end">
+              <Button onClick={handleAddFamilyMember}>Add Member</Button>
+            </div>
           </DialogContent>
         </Dialog>
       </div>
-
-      {/* Edit Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
+      
+      <Card>
+        <CardContent className="pt-6">
+          <div className="space-y-2">
+            {familyMembers.length === 0 ? (
+              <p className="text-muted-foreground text-center py-4">No family members found. Add a family member to get started.</p>
+            ) : (
+              familyMembers.map((member) => (
+                <div 
+                  key={member.id}
+                  className={`flex justify-between items-center p-3 rounded-lg ${
+                    member.is_default ? 'bg-fintrack-bg-dark' : 'hover:bg-fintrack-bg-dark/50'
+                  }`}
+                >
+                  <div className="flex items-center space-x-3">
+                    <div>
+                      <div className="font-medium">{member.name}</div>
+                      <div className="text-sm text-muted-foreground">{member.relationship}</div>
+                    </div>
+                    {member.is_default && (
+                      <span className="bg-green-500/20 text-green-500 text-xs py-0.5 px-2 rounded">Default</span>
+                    )}
+                  </div>
+                  
+                  <div className="flex space-x-1">
+                    {!member.is_default && (
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleSetDefault(member.id)}
+                      >
+                        Set Default
+                      </Button>
+                    )}
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      onClick={() => openEditMemberDialog(member)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      onClick={() => handleDeleteFamilyMember(member.id)}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </CardContent>
+      </Card>
+      
+      {/* Edit family member dialog */}
+      <Dialog open={isEditMemberDialogOpen} onOpenChange={setIsEditMemberDialogOpen}>
+        <DialogContent className="bg-fintrack-card-dark border border-fintrack-bg-dark">
           <DialogHeader>
             <DialogTitle>Edit Family Member</DialogTitle>
-            <DialogDescription>Update the details of this family member.</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit-name">Name</Label>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right" htmlFor="edit-member-name">
+                Name
+              </Label>
               <Input
-                id="edit-name"
-                placeholder="Enter name"
-                value={editingMember?.name || ''}
-                onChange={(e) => setEditingMember(prev => prev ? { ...prev, name: e.target.value } : null)}
+                id="edit-member-name"
+                className="col-span-3"
+                value={editMemberName}
+                onChange={(e) => setEditMemberName(e.target.value)}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-relation">Relation</Label>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right" htmlFor="edit-member-relationship">
+                Relationship
+              </Label>
               <Input
-                id="edit-relation"
-                placeholder="E.g., Spouse, Child, Parent"
-                value={editingMember?.relation || ''}
-                onChange={(e) => setEditingMember(prev => prev ? { ...prev, relation: e.target.value } : null)}
+                id="edit-member-relationship"
+                className="col-span-3"
+                value={editMemberRelationship}
+                onChange={(e) => setEditMemberRelationship(e.target.value)}
               />
             </div>
           </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsEditDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              className="bg-fintrack-purple hover:bg-fintrack-purple/90"
-              onClick={handleEditMember}
-            >
-              Save Changes
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Family Member</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete this family member? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <Alert variant="destructive">
-              <AlertTitle>Warning</AlertTitle>
-              <AlertDescription>
-                Deleting this family member will remove all associated financial data.
-              </AlertDescription>
-            </Alert>
+          <div className="flex justify-end">
+            <Button onClick={handleEditFamilyMember}>Update Member</Button>
           </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsDeleteDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDeleteMember}
-            >
-              Delete
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Set Default Confirmation Dialog */}
-      <Dialog open={isSetDefaultDialogOpen} onOpenChange={setIsSetDefaultDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Set as Default</DialogTitle>
-            <DialogDescription>
-              Set this family member as the default for new transactions?
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsSetDefaultDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              className="bg-fintrack-purple hover:bg-fintrack-purple/90"
-              onClick={handleSetDefaultMember}
-            >
-              Set as Default
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Family members list */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {isLoading ? (
-          <div className="col-span-full flex justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-fintrack-purple"></div>
-          </div>
-        ) : (
-          <>
-            {familyMembers.map((member) => (
-              <Card key={member.id} className="card-gradient border-none">
-                <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0 pt-6">
-                  <CardTitle className="text-xl font-medium flex items-center gap-2">
-                    {member.name}
-                    {member.is_default && (
-                      <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />
-                    )}
-                  </CardTitle>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="h-8 w-8 p-0">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => openEditDialog(member)}>
-                        <Edit3 className="mr-2 h-4 w-4" /> Edit
-                      </DropdownMenuItem>
-                      {!member.is_default && (
-                        <DropdownMenuItem onClick={() => openSetDefaultDialog(String(member.id))}>
-                          <CheckCircle className="mr-2 h-4 w-4" /> Set as Default
-                        </DropdownMenuItem>
-                      )}
-                      {String(member.id) !== defaultMemberId && (
-                        <DropdownMenuItem onClick={() => openDeleteDialog(String(member.id))}>
-                          <Trash className="mr-2 h-4 w-4" /> Delete
-                        </DropdownMenuItem>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-sm text-fintrack-text-secondary">
-                    <p><span className="font-medium">Relation:</span> {member.relation || 'Not specified'}</p>
-                    <p className="mt-1">
-                      {member.is_default ? (
-                        <span className="inline-flex items-center rounded-full bg-green-500/10 px-2 py-1 text-xs font-medium text-green-500">
-                          Default Member
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center rounded-full bg-gray-500/10 px-2 py-1 text-xs font-medium text-gray-400">
-                          Not Default
-                        </span>
-                      )}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-
-            {familyMembers.length === 0 && (
-              <Card className="col-span-full bg-fintrack-card-dark border border-fintrack-bg-dark">
-                <CardContent className="flex flex-col items-center justify-center py-8">
-                  <p className="text-center text-fintrack-text-secondary mb-4">
-                    No family members found. Add your first family member to get started.
-                  </p>
-                  <Button
-                    className="bg-fintrack-purple hover:bg-fintrack-purple/90"
-                    onClick={() => setIsAddDialogOpen(true)}
-                  >
-                    <Plus className="mr-2 h-4 w-4" /> Add Family Member
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
-          </>
-        )}
-      </div>
     </div>
   );
 };
 
-export default FamilyMembers;
+export default FamilyMembersPage;

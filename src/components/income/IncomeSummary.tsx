@@ -15,8 +15,6 @@ const IncomeSummary: React.FC<IncomeSummaryProps> = ({
   entriesCount,
   selectedFamilyMemberName,
 }) => {
-  console.log("Income summary values:", { totalIncome, averageIncome, entriesCount });
-  
   // Ensure the values are numbers and parse them properly
   const formattedTotal = typeof totalIncome === 'number' ? parseFloat(String(totalIncome)).toFixed(2) : '0.00';
   const formattedAverage = typeof averageIncome === 'number' ? parseFloat(String(averageIncome)).toFixed(2) : '0.00';

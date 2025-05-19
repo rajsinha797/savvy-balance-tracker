@@ -13,14 +13,9 @@ router.post('/', walletController.createWallet);
 router.put('/:id', walletController.updateWallet);
 router.delete('/:id', walletController.deleteWallet);
 
-// Wallet categorization endpoints
+// Wallet types API endpoint
 router.get('/types', walletCategoryController.getAllWalletTypes);
 router.get('/categories/by-type/:typeId', walletCategoryController.getWalletCategoriesByType);
-router.get('/subcategories/by-category/:categoryId', walletCategoryController.getWalletSubcategoriesByCategory);
-
-// Wallet types/categories/subcategories management 
-router.post('/types', walletCategoryController.createWalletType);
-router.post('/categories', walletCategoryController.createWalletCategory);
-router.post('/subcategories', walletCategoryController.createWalletSubcategory);
+router.get('/subcategories/by-category/:categoryId', walletCategoryController.getWalletSubCategoriesByCategory);
 
 export default router;

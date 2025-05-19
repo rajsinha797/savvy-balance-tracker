@@ -5,7 +5,7 @@ import { Plus } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useWalletApi } from '@/hooks/useWalletApi';
 import { useFamilyApi } from '@/hooks/useFamilyApi';
-import { WalletFormData, Wallet } from '@/services/walletService'; // Import Wallet type
+import { WalletFormData, Wallet } from '@/services/walletService';
 import WalletForm from '@/components/wallet/WalletForm';
 import WalletList from '@/components/wallet/WalletList';
 import WalletSummary from '@/components/wallet/WalletSummary';
@@ -115,7 +115,7 @@ const WalletPage = () => {
       amount: newWallet.amount,
       wallet_type_id: newWallet.wallet_type_id,
       wallet_category_id: newWallet.wallet_category_id,
-      wallet_sub_category_id: newWallet.wallet_sub_category_id,
+      wallet_sub_category_id: newWallet.wallet_sub_category_id || undefined,
       date: newWallet.date,
       description: newWallet.description || '',
       family_member_id: newWallet.family_member_id || undefined
@@ -129,7 +129,7 @@ const WalletPage = () => {
       amount: 0,
       wallet_type_id: 0,
       wallet_category_id: 0,
-      wallet_sub_category_id: 0,
+      wallet_sub_category_id: null,
       description: '',
       date: new Date().toISOString().split('T')[0],
       family_member_id: newWallet.family_member_id || ''
@@ -141,11 +141,11 @@ const WalletPage = () => {
     if (!editingWallet) return;
     
     const formData: WalletFormData = {
-      name: editingWallet.name,
-      amount: editingWallet.amount,
+      name: editingWallet.name || '',
+      amount: typeof editingWallet.amount === 'number' ? editingWallet.amount : 0,
       wallet_type_id: editingWallet.wallet_type_id || 0,
       wallet_category_id: editingWallet.wallet_category_id || 0,
-      wallet_sub_category_id: editingWallet.wallet_sub_category_id || 0, 
+      wallet_sub_category_id: editingWallet.wallet_sub_category_id || undefined, 
       date: editingWallet.date || new Date().toISOString().split('T')[0],
       description: editingWallet.description || '',
       family_member_id: editingWallet.family_member_id || undefined
@@ -202,13 +202,6 @@ const WalletPage = () => {
     setEditingWallet(formattedWallet);
     setIsDialogOpen(true);
   };
-
-  // Calculate summary data for wallets
-  const totalBalance = wallets.reduce((total, wallet) => {
-    return total + Number(wallet.amount);
-  }, 0);
-
-  const activeWallets = wallets.length;
 
   return (
     <div className="space-y-6 animate-fade-in">
