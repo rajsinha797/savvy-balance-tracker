@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -110,7 +109,7 @@ const WalletForm: React.FC<WalletFormProps> = ({
           placeholder="Enter wallet name"
           value={formData.name || ''}
           onChange={(e) => onFormChange('name', e.target.value)}
-          className="bg-fintrack-input"
+          className="bg-fintrack-card-dark border border-fintrack-bg-dark"
         />
       </div>
       
@@ -123,7 +122,7 @@ const WalletForm: React.FC<WalletFormProps> = ({
             placeholder="Enter amount"
             value={formData.amount || ''}
             onChange={(e) => onFormChange('amount', e.target.value ? parseFloat(e.target.value) : 0)}
-            className="bg-fintrack-input"
+            className="bg-fintrack-card-dark border border-fintrack-bg-dark"
           />
         </div>
         
@@ -134,7 +133,7 @@ const WalletForm: React.FC<WalletFormProps> = ({
             type="date"
             value={formData.date || ''}
             onChange={(e) => onFormChange('date', e.target.value)}
-            className="bg-fintrack-input"
+            className="bg-fintrack-card-dark border border-fintrack-bg-dark"
           />
         </div>
       </div>
@@ -145,7 +144,7 @@ const WalletForm: React.FC<WalletFormProps> = ({
           value={formData.wallet_type_id ? String(formData.wallet_type_id) : ''}
           onValueChange={(value) => onFormChange('wallet_type_id', parseInt(value))}
         >
-          <SelectTrigger id="wallet-type" className="bg-fintrack-input">
+          <SelectTrigger id="wallet-type" className="bg-fintrack-card-dark border border-fintrack-bg-dark">
             <SelectValue placeholder="Select wallet type" />
           </SelectTrigger>
           <SelectContent>
@@ -168,7 +167,7 @@ const WalletForm: React.FC<WalletFormProps> = ({
           onValueChange={(value) => onFormChange('wallet_category_id', parseInt(value))}
           disabled={isLoadingCategories || categories.length === 0}
         >
-          <SelectTrigger id="wallet-category" className="bg-fintrack-input">
+          <SelectTrigger id="wallet-category" className="bg-fintrack-card-dark border border-fintrack-bg-dark">
             <SelectValue placeholder="Select wallet category" />
           </SelectTrigger>
           <SelectContent>
@@ -187,15 +186,14 @@ const WalletForm: React.FC<WalletFormProps> = ({
           {isLoadingSubcategories && <Loader2 className="h-4 w-4 inline ml-2 animate-spin" />}
         </Label>
         <Select
-          value={formData.wallet_sub_category_id ? String(formData.wallet_sub_category_id) : ''}
-          onValueChange={(value) => onFormChange('wallet_sub_category_id', value ? parseInt(value) : null)}
+          value={formData.wallet_sub_category_id ? String(formData.wallet_sub_category_id) : 'none'}
+          onValueChange={(value) => onFormChange('wallet_sub_category_id', value === 'none' ? null : parseInt(value))}
           disabled={isLoadingSubcategories || subcategories.length === 0}
         >
-          <SelectTrigger id="wallet-subcategory" className="bg-fintrack-input">
+          <SelectTrigger id="wallet-subcategory" className="bg-fintrack-card-dark border border-fintrack-bg-dark">
             <SelectValue placeholder="Select wallet subcategory (optional)" />
           </SelectTrigger>
           <SelectContent>
-            {/* Fix: Ensure non-empty value for SelectItem */}
             {subcategories.map((subcategory) => (
               <SelectItem key={subcategory.id} value={String(subcategory.id)}>
                 {subcategory.name}
@@ -209,14 +207,13 @@ const WalletForm: React.FC<WalletFormProps> = ({
       <div className="space-y-2">
         <Label htmlFor="family-member">Family Member (Optional)</Label>
         <Select
-          value={formData.family_member_id || ''}
-          onValueChange={(value) => onFormChange('family_member_id', value)}
+          value={formData.family_member_id || 'none'}
+          onValueChange={(value) => onFormChange('family_member_id', value === 'none' ? '' : value)}
         >
-          <SelectTrigger id="family-member" className="bg-fintrack-input">
+          <SelectTrigger id="family-member" className="bg-fintrack-card-dark border border-fintrack-bg-dark">
             <SelectValue placeholder="Select family member (optional)" />
           </SelectTrigger>
           <SelectContent>
-            {/* Fix: Ensure non-empty value for SelectItem */}
             <SelectItem value="none">None</SelectItem>
             {familyMembers.map((member) => (
               <SelectItem key={member.id} value={String(member.id)}>
@@ -234,7 +231,7 @@ const WalletForm: React.FC<WalletFormProps> = ({
           placeholder="Enter description"
           value={formData.description || ''}
           onChange={(e) => onFormChange('description', e.target.value)}
-          className="bg-fintrack-input"
+          className="bg-fintrack-card-dark border border-fintrack-bg-dark"
         />
       </div>
 

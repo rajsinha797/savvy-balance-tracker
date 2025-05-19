@@ -202,8 +202,8 @@ export interface ExpenseFormData {
   expense_sub_category_id: number;
   date: string;
   description: string;
-  family_member_id?: string;
-  wallet_id?: number | null;
+  family_member_id: string;
+  wallet_id: number | null;
 }
 
 export const createExpense = async (expense: ExpenseFormData): Promise<{ success: boolean; message: string; id?: number }> => {

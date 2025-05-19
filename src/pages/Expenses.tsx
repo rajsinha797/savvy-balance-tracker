@@ -15,6 +15,7 @@ import FamilyFilter from '@/components/income/FamilyFilter';
 // Import custom hooks
 import { useExpenseApi } from '@/hooks/useExpenseApi';
 import { useFamilyApi } from '@/hooks/useFamilyApi';
+import { useWalletApi } from '@/hooks/useWalletApi';
 
 const ExpensesPage = () => {
   const [selectedFamilyMember, setSelectedFamilyMember] = useState<string>("all-members");
@@ -22,18 +23,19 @@ const ExpensesPage = () => {
   
   // Use our custom hooks
   const { familyMembers } = useFamilyApi();
+  const { availableWallets } = useWalletApi();
   const { 
     expenses, 
     expenseTypes, 
     getExpenseCategoriesByType,
-    getExpenseSubCategoriesByCategoryId: getExpenseSubCategoriesByCategory, // Aliased to match expected property name
+    getExpenseSubCategoriesByCategoryId: getExpenseSubCategoriesByCategory,
     isLoading,
     createExpense: addExpense,
     updateExpense: updateExpenseItem,
     deleteExpense: deleteExpenseItem
   } = useExpenseApi(selectedFamilyMember !== 'all-members' ? selectedFamilyMember : undefined);
   
-  // New expense form data state with the enhanced categorization structure and wallet
+  // New expense form data state with wallet field
   const [newExpense, setNewExpense] = useState<{ 
     amount: number; 
     expense_type_id: number;
@@ -87,7 +89,7 @@ const ExpensesPage = () => {
     : 0;
 
   const handleFamilyMemberChange = (value: string) => {
-    setSelectedFamilyMember(value === "all-members" ? "" : value);
+    setSelectedFamilyMember(value);
   };
   
   // Handle form submits
@@ -155,16 +157,16 @@ const ExpensesPage = () => {
     return member ? member.name : null;
   };
 
-  const selectedFamilyMemberName = selectedFamilyMember
+  const selectedFamilyMemberName = selectedFamilyMember !== 'all-members'
     ? getFamilyMemberName(selectedFamilyMember)
     : null;
     
   // Handlers for form changes
-  const handleNewExpenseChange = (field: string, value: string | number) => {
+  const handleNewExpenseChange = (field: string, value: string | number | null) => {
     setNewExpense(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleEditingExpenseChange = (field: string, value: string | number) => {
+  const handleEditingExpenseChange = (field: string, value: string | number | null) => {
     if (editingExpense) {
       setEditingExpense(prev => {
         if (prev) {
@@ -222,6 +224,7 @@ const ExpensesPage = () => {
                 getExpenseCategoriesByType={getExpenseCategoriesByType}
                 getExpenseSubCategoriesByCategory={getExpenseSubCategoriesByCategory}
                 familyMembers={familyMembers}
+                availableWallets={availableWallets}
               />
             </DialogContent>
           </Dialog>

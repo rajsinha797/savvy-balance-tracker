@@ -30,12 +30,13 @@ interface ExpenseFormProps {
     family_member_id: string;
     wallet_id: number | null;
   };
-  onFormChange: (field: string, value: string | number) => void;
+  onFormChange: (field: string, value: string | number | null) => void;
   onSubmit: () => void;
   expenseTypes: ExpenseType[];
   getExpenseCategoriesByType: (typeId: number) => Promise<any[]>;
   getExpenseSubCategoriesByCategory: (categoryId: number) => Promise<any[]>;
   familyMembers: FamilyMember[];
+  availableWallets: Wallet[];
 }
 
 const ExpenseForm: React.FC<ExpenseFormProps> = ({
@@ -47,6 +48,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
   getExpenseCategoriesByType,
   getExpenseSubCategoriesByCategory,
   familyMembers,
+  availableWallets
 }) => {
   const [expenseCategories, setExpenseCategories] = useState<any[]>([]);
   const [expenseSubCategories, setExpenseSubCategories] = useState<any[]>([]);
@@ -101,6 +103,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
             value={formData.amount}
             onChange={(e) => onFormChange('amount', parseFloat(e.target.value) || 0)}
             placeholder="Enter amount"
+            className="bg-fintrack-card-dark border border-fintrack-bg-dark"
           />
         </div>
 
@@ -112,6 +115,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
             type="date"
             value={formData.date}
             onChange={(e) => onFormChange('date', e.target.value)}
+            className="bg-fintrack-card-dark border border-fintrack-bg-dark"
           />
         </div>
 
@@ -122,7 +126,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
             value={formData.expense_type_id ? formData.expense_type_id.toString() : ""}
             onValueChange={(value) => onFormChange('expense_type_id', parseInt(value) || 0)}
           >
-            <SelectTrigger>
+            <SelectTrigger id="expense-type" className="bg-fintrack-card-dark border border-fintrack-bg-dark">
               <SelectValue placeholder="Select an expense type" />
             </SelectTrigger>
             <SelectContent>
@@ -149,7 +153,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
             onValueChange={(value) => onFormChange('expense_category_id', parseInt(value) || 0)}
             disabled={isLoadingCategories || !formData.expense_type_id}
           >
-            <SelectTrigger>
+            <SelectTrigger id="expense-category" className="bg-fintrack-card-dark border border-fintrack-bg-dark">
               {isLoadingCategories ? (
                 <div className="flex items-center">
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -185,7 +189,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
             onValueChange={(value) => onFormChange('expense_sub_category_id', parseInt(value) || 0)}
             disabled={isLoadingSubCategories || !formData.expense_category_id}
           >
-            <SelectTrigger>
+            <SelectTrigger id="expense-subcategory" className="bg-fintrack-card-dark border border-fintrack-bg-dark">
               {isLoadingSubCategories ? (
                 <div className="flex items-center">
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -220,7 +224,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
             value={formData.family_member_id || ""}
             onValueChange={(value) => onFormChange('family_member_id', value)}
           >
-            <SelectTrigger>
+            <SelectTrigger id="family-member" className="bg-fintrack-card-dark border border-fintrack-bg-dark">
               <SelectValue placeholder="Select a family member" />
             </SelectTrigger>
             <SelectContent>
@@ -239,6 +243,33 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
           </Select>
         </div>
 
+        {/* Wallet Selection - New Addition */}
+        <div className="space-y-2">
+          <Label htmlFor="wallet">Expense from Wallet (Optional)</Label>
+          <Select
+            value={formData.wallet_id ? formData.wallet_id.toString() : "none"}
+            onValueChange={(value) => onFormChange('wallet_id', value === "none" ? null : parseInt(value))}
+          >
+            <SelectTrigger id="wallet" className="bg-fintrack-card-dark border border-fintrack-bg-dark">
+              <SelectValue placeholder="Select a wallet (optional)" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value="none">None</SelectItem>
+                {availableWallets && availableWallets.length > 0 ? (
+                  availableWallets.map((wallet) => (
+                    <SelectItem key={wallet.id} value={wallet.id.toString()}>
+                      {wallet.name} (₹{typeof wallet.amount === 'number' ? wallet.amount.toFixed(2) : wallet.amount})
+                    </SelectItem>
+                  ))
+                ) : (
+                  <SelectItem value="placeholder" disabled>No wallets available</SelectItem>
+                )}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </div>
+
         {/* Description */}
         <div className="space-y-2">
           <Label htmlFor="description">Description (Optional)</Label>
@@ -248,10 +279,11 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
             onChange={(e) => onFormChange('description', e.target.value)}
             placeholder="Enter a description"
             rows={3}
+            className="bg-fintrack-card-dark border border-fintrack-bg-dark"
           />
         </div>
 
-        <Button type="submit" className="w-full mt-4">
+        <Button type="submit" className="w-full bg-fintrack-purple hover:bg-fintrack-purple/90 mt-4">
           {isEditing ? 'Update Expense' : 'Add Expense'}
         </Button>
       </div>

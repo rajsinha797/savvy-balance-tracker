@@ -2,7 +2,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Edit, Trash2 } from 'lucide-react';
+import { Edit, Trash2, Wallet } from 'lucide-react';
 import { ExpenseItem } from '@/services/expenseService';
 
 interface ExpenseListProps {
@@ -44,6 +44,7 @@ const ExpenseList: React.FC<ExpenseListProps> = ({
                   <th className="px-4 py-3 text-left text-xs font-medium text-fintrack-text-secondary">Category</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-fintrack-text-secondary">Subcategory</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-fintrack-text-secondary">Family Member</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-fintrack-text-secondary">Wallet</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-fintrack-text-secondary">Description</th>
                   <th className="px-4 py-3 text-right text-xs font-medium text-fintrack-text-secondary">Amount</th>
                   <th className="px-4 py-3 text-right text-xs font-medium text-fintrack-text-secondary">Actions</th>
@@ -76,6 +77,15 @@ const ExpenseList: React.FC<ExpenseListProps> = ({
                       <td className="px-4 py-3 text-sm whitespace-nowrap">
                         {expense.family_member || "Not assigned"}
                       </td>
+                      <td className="px-4 py-3 text-sm whitespace-nowrap">
+                        {expense.wallet_name ? (
+                          <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-blue-500/10 text-blue-500">
+                            <Wallet className="h-3 w-3 mr-1" /> {expense.wallet_name}
+                          </span>
+                        ) : (
+                          "None"
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-sm">{expense.description}</td>
                       <td className="px-4 py-3 text-sm font-medium text-red-500 text-right">
                         ₹{amount.toFixed(2)}
@@ -105,7 +115,7 @@ const ExpenseList: React.FC<ExpenseListProps> = ({
                 })}
                 {safeExpenses.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="px-4 py-6 text-center text-fintrack-text-secondary">
+                    <td colSpan={9} className="px-4 py-6 text-center text-fintrack-text-secondary">
                       No expense entries found. Add your first expense entry.
                     </td>
                   </tr>
