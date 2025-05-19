@@ -1,9 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   ExpenseItem, 
-  ExpenseCategory,
-  ExpenseType,
   ExpenseSubCategory,
+  ExpenseType,
   getAllExpenses, 
   getExpenseCategories,
   getAllExpenseTypes,

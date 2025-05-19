@@ -19,7 +19,7 @@ const FamilyMembersPage = () => {
   // States for form data
   const [newFamilyName, setNewFamilyName] = useState('');
   const [editFamilyName, setEditFamilyName] = useState('');
-  const [editFamilyId, setEditFamilyId] = useState<number>(0);
+  const [editFamilyId, setEditFamilyId] = useState<string>(''); // Changed from number to string
   
   const [newMemberName, setNewMemberName] = useState('');
   const [newMemberRelationship, setNewMemberRelationship] = useState('');
@@ -59,7 +59,7 @@ const FamilyMembersPage = () => {
     }
   };
   
-  const handleDeleteFamily = async (id: number) => {
+  const handleDeleteFamily = async (id: string) => {
     if (confirm('Are you sure you want to delete this family? This action cannot be undone.')) {
       await deleteFamily(id);
     }
@@ -100,7 +100,7 @@ const FamilyMembersPage = () => {
   };
   
   const openEditFamilyDialog = (family: Family) => {
-    setEditFamilyId(family.family_id);
+    setEditFamilyId(family.family_id.toString()); // Convert to string
     setEditFamilyName(family.name);
     setIsEditFamilyDialogOpen(true);
   };
@@ -188,7 +188,7 @@ const FamilyMembersPage = () => {
                       size="icon"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleDeleteFamily(family.family_id);
+                        handleDeleteFamily(family.family_id.toString()); // Convert to string
                       }}
                     >
                       <Trash2 className="h-4 w-4 text-destructive" />
