@@ -3,7 +3,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { 
   Family,
   FamilyMember,
-  ApiResponse,
   getAllFamilies,
   getFamilyById,
   addFamily,
@@ -13,6 +12,7 @@ import {
   addFamilyMember, 
   updateFamilyMember, 
   deleteFamilyMember,
+  setDefaultFamilyMember,
   getDefaultFamilyMember
 } from '@/services/familyService';
 import { useToast } from "@/hooks/use-toast";
@@ -85,23 +85,14 @@ export const useFamilyApi = (initialFamilyId: number = 1) => {
     try {
       const result = await addFamily(name);
       
-      if (result.success) {
-        await loadFamilies(); // Refresh the data
-        
-        toast({
-          title: "Success",
-          description: result.message || "Family added successfully",
-        });
-        
-        return true;
-      } else {
-        toast({
-          title: "Error",
-          description: result.message || "Failed to add family",
-          variant: "destructive",
-        });
-        return false;
-      }
+      await loadFamilies(); // Refresh the data
+      
+      toast({
+        title: "Success",
+        description: "Family added successfully",
+      });
+      
+      return true;
     } catch (error) {
       console.error('Error adding family:', error);
       toast({
@@ -117,25 +108,16 @@ export const useFamilyApi = (initialFamilyId: number = 1) => {
   const updateFamilyItem = async (id: number, name: string) => {
     try {
       // Convert number to string for the API call
-      const result = await updateFamily(String(id), name);
+      await updateFamily(String(id), name);
       
-      if (result.success) {
-        await loadFamilies(); // Refresh the data
-        
-        toast({
-          title: "Success",
-          description: result.message || "Family updated successfully",
-        });
-        
-        return true;
-      } else {
-        toast({
-          title: "Error",
-          description: result.message || "Failed to update family",
-          variant: "destructive",
-        });
-        return false;
-      }
+      await loadFamilies(); // Refresh the data
+      
+      toast({
+        title: "Success",
+        description: "Family updated successfully",
+      });
+      
+      return true;
     } catch (error) {
       console.error('Error updating family:', error);
       toast({
@@ -151,25 +133,16 @@ export const useFamilyApi = (initialFamilyId: number = 1) => {
   const deleteFamilyItem = async (id: number) => {
     try {
       // Convert number to string for the API call
-      const result = await deleteFamily(String(id));
+      await deleteFamily(String(id));
       
-      if (result.success) {
-        await loadFamilies(); // Refresh the data
-        
-        toast({
-          title: "Success",
-          description: result.message || "Family deleted successfully",
-        });
-        
-        return true;
-      } else {
-        toast({
-          title: "Error",
-          description: result.message || "Failed to delete family",
-          variant: "destructive",
-        });
-        return false;
-      }
+      await loadFamilies(); // Refresh the data
+      
+      toast({
+        title: "Success",
+        description: "Family deleted successfully",
+      });
+      
+      return true;
     } catch (error) {
       console.error('Error deleting family:', error);
       toast({
@@ -190,25 +163,16 @@ export const useFamilyApi = (initialFamilyId: number = 1) => {
         family_id: memberData.family_id || currentFamilyId
       };
       
-      const result = await addFamilyMember(dataWithFamily);
+      await addFamilyMember(dataWithFamily);
       
-      if (result.success) {
-        await loadFamilyMembers(); // Refresh the data
-        
-        toast({
-          title: "Success",
-          description: result.message || "Family member added successfully",
-        });
-        
-        return true;
-      } else {
-        toast({
-          title: "Error",
-          description: result.message || "Failed to add family member",
-          variant: "destructive",
-        });
-        return false;
-      }
+      await loadFamilyMembers(); // Refresh the data
+      
+      toast({
+        title: "Success",
+        description: "Family member added successfully",
+      });
+      
+      return true;
     } catch (error) {
       console.error('Error adding family member:', error);
       toast({
@@ -223,25 +187,16 @@ export const useFamilyApi = (initialFamilyId: number = 1) => {
   // Update family member
   const updateFamilyMemberItem = async (id: string, memberData: Omit<FamilyMember, 'id' | 'family_id'> & { family_id?: number }) => {
     try {
-      const result = await updateFamilyMember(id, memberData);
+      await updateFamilyMember(id, memberData);
       
-      if (result.success) {
-        await loadFamilyMembers(); // Refresh the data
-        
-        toast({
-          title: "Success",
-          description: result.message || "Family member updated successfully",
-        });
-        
-        return true;
-      } else {
-        toast({
-          title: "Error",
-          description: result.message || "Failed to update family member",
-          variant: "destructive",
-        });
-        return false;
-      }
+      await loadFamilyMembers(); // Refresh the data
+      
+      toast({
+        title: "Success",
+        description: "Family member updated successfully",
+      });
+      
+      return true;
     } catch (error) {
       console.error('Error updating family member:', error);
       toast({
@@ -256,27 +211,42 @@ export const useFamilyApi = (initialFamilyId: number = 1) => {
   // Delete family member
   const deleteFamilyMemberItem = async (id: string) => {
     try {
-      const result = await deleteFamilyMember(id);
+      await deleteFamilyMember(id);
       
-      if (result.success) {
-        await loadFamilyMembers(); // Refresh the data
-        
-        toast({
-          title: "Success",
-          description: result.message || "Family member deleted successfully",
-        });
-        
-        return true;
-      } else {
-        toast({
-          title: "Error",
-          description: result.message || "Failed to delete family member",
-          variant: "destructive",
-        });
-        return false;
-      }
+      await loadFamilyMembers(); // Refresh the data
+      
+      toast({
+        title: "Success",
+        description: "Family member deleted successfully",
+      });
+      
+      return true;
     } catch (error) {
       console.error('Error deleting family member:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
+  // Set default family member
+  const setDefaultFamilyMemberItem = async (id: string) => {
+    try {
+      await setDefaultFamilyMember(id);
+      
+      await loadFamilyMembers(); // Refresh the data
+      
+      toast({
+        title: "Success",
+        description: "Default family member updated successfully",
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('Error setting default family member:', error);
       toast({
         title: "Error",
         description: "An unexpected error occurred",
@@ -306,12 +276,13 @@ export const useFamilyApi = (initialFamilyId: number = 1) => {
     isApiAvailable,
     currentFamilyId,
     switchFamily,
-    addFamilyItem,
-    updateFamilyItem,
-    deleteFamilyItem,
-    addFamilyMemberItem,
-    updateFamilyMemberItem,
-    deleteFamilyMemberItem,
+    addFamily: addFamilyItem,
+    updateFamily: updateFamilyItem,
+    deleteFamily: deleteFamilyItem,
+    addFamilyMember: addFamilyMemberItem,
+    updateFamilyMember: updateFamilyMemberItem,
+    deleteFamilyMember: deleteFamilyMemberItem,
+    setDefaultFamilyMember: setDefaultFamilyMemberItem,
     refreshData
   };
 };

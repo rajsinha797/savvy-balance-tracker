@@ -61,16 +61,16 @@ const WalletList: React.FC<WalletListProps> = ({
                     </td>
                     <td className="px-4 py-3 text-sm whitespace-nowrap">
                       <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-blue-500/10 text-blue-500">
-                        {wallet.wallet_category_name || 'Not specified'}
+                        {wallet.category_name || 'Not specified'}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-sm whitespace-nowrap">
                       <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-purple-500/10 text-purple-500">
-                        {wallet.wallet_sub_category_name || 'None'}
+                        {wallet.subcategory_name || 'None'}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-sm whitespace-nowrap">
-                      {wallet.family_member || 'Not assigned'}
+                      {wallet.family_member_name || 'Not assigned'}
                     </td>
                     <td className="px-4 py-3 text-sm whitespace-nowrap">{wallet.date || 'Not specified'}</td>
                     <td className="px-4 py-3 text-sm">{wallet.description || 'No description'}</td>

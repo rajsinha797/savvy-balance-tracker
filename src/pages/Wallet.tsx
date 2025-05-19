@@ -15,6 +15,29 @@ import FamilyFilter from '@/components/income/FamilyFilter';
 import { useWalletApi } from '@/hooks/useWalletApi';
 import { useFamilyApi } from '@/hooks/useFamilyApi';
 
+// Format date function
+const formatDateForDisplay = (dateString?: string): string => {
+  if (!dateString) return '';
+
+  // Handle ISO date strings
+  if (dateString.includes('T')) {
+    return dateString.split('T')[0];
+  }
+
+  // Handle DD/MM/YYYY format
+  if (dateString.includes('/')) {
+    const parts = dateString.split('/');
+    if (parts.length === 3) {
+      const day = parts[0].padStart(2, '0');
+      const month = parts[1].padStart(2, '0'); 
+      return `${parts[2]}-${month}-${day}`;
+    }
+  }
+
+  // Return as is if already in YYYY-MM-DD format or can't parse
+  return dateString;
+};
+
 const WalletPage = () => {
   const [selectedFamilyMember, setSelectedFamilyMember] = useState<string>("all-members");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -88,29 +111,6 @@ const WalletPage = () => {
   const handleFamilyMemberChange = (value: string) => {
     setSelectedFamilyMember(value);
   };
-
-  // Format date function
-  const formatDateForDisplay = (dateString?: string): string => {
-    if (!dateString) return '';
-
-    // Handle ISO date strings
-    if (dateString.includes('T')) {
-      return dateString.split('T')[0];
-    }
-
-    // Handle DD/MM/YYYY format
-    if (dateString.includes('/')) {
-      const parts = dateString.split('/');
-      if (parts.length === 3) {
-        const day = parts[0].padStart(2, '0');
-        const month = parts[1].padStart(2, '0'); 
-        return `${parts[2]}-${month}-${day}`;
-      }
-    }
-
-    // Return as is if already in YYYY-MM-DD format or can't parse
-    return dateString;
-  };
   
   // Handle form submits
   const handleAddWallet = () => {
@@ -136,18 +136,20 @@ const WalletPage = () => {
       return;
     }
     
+    const formData = {
+      name: editingWallet.name,
+      amount: editingWallet.amount as number,
+      wallet_type_id: editingWallet.wallet_type_id as number,
+      wallet_category_id: editingWallet.wallet_category_id as number,
+      wallet_sub_category_id: editingWallet.wallet_sub_category_id || undefined,
+      description: editingWallet.description || '',
+      date: editingWallet.date || new Date().toISOString().split('T')[0],
+      family_member_id: editingWallet.family_member_id || undefined
+    };
+    
     updateWalletItem({
       id: editingWallet.id,
-      wallet: {
-        name: editingWallet.name,
-        amount: editingWallet.amount,
-        wallet_type_id: editingWallet.wallet_type_id,
-        wallet_category_id: editingWallet.wallet_category_id,
-        wallet_sub_category_id: editingWallet.wallet_sub_category_id || undefined,
-        description: editingWallet.description || '',
-        date: editingWallet.date || new Date().toISOString().split('T')[0],
-        family_member_id: editingWallet.family_member_id
-      }
+      wallet: formData
     });
     
     setEditingWallet(null);

@@ -55,7 +55,7 @@ const FamilyMembers = () => {
     if (familyMembers.length > 0) {
       const defaultMember = familyMembers.find(member => member.is_default);
       if (defaultMember) {
-        setDefaultMemberId(defaultMember.id);
+        setDefaultMemberId(String(defaultMember.id));
       }
     }
   }, [familyMembers]);
@@ -78,7 +78,7 @@ const FamilyMembers = () => {
   const handleEditMember = () => {
     if (!editingMember || !editingMember.name) return;
 
-    updateFamilyMember(editingMember.id.toString(), {
+    updateFamilyMember(String(editingMember.id), {
       name: editingMember.name,
       relation: editingMember.relation || 'Other'
     });
@@ -306,12 +306,12 @@ const FamilyMembers = () => {
                         <Edit3 className="mr-2 h-4 w-4" /> Edit
                       </DropdownMenuItem>
                       {!member.is_default && (
-                        <DropdownMenuItem onClick={() => openSetDefaultDialog(member.id.toString())}>
+                        <DropdownMenuItem onClick={() => openSetDefaultDialog(String(member.id))}>
                           <CheckCircle className="mr-2 h-4 w-4" /> Set as Default
                         </DropdownMenuItem>
                       )}
-                      {String(member.id) !== String(defaultMemberId) && (
-                        <DropdownMenuItem onClick={() => openDeleteDialog(member.id.toString())}>
+                      {String(member.id) !== defaultMemberId && (
+                        <DropdownMenuItem onClick={() => openDeleteDialog(String(member.id))}>
                           <Trash className="mr-2 h-4 w-4" /> Delete
                         </DropdownMenuItem>
                       )}

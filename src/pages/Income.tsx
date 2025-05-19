@@ -149,7 +149,7 @@ const IncomePage = () => {
     if (!editingIncome) return;
     
     const formData: IncomeFormData = {
-      amount: editingIncome.amount,
+      amount: editingIncome.amount as number,
       income_type_id: editingIncome.income_type_id || 0,
       income_category_id: editingIncome.income_category_id || 0,
       income_sub_category_id: editingIncome.income_sub_category_id || 0,
@@ -185,6 +185,17 @@ const IncomePage = () => {
     });
     setIsAddDialogOpen(true);
   };
+
+  // Find family member name by ID
+  const getFamilyMemberName = (id?: string) => {
+    if (!id) return null;
+    const member = familyMembers.find(m => m.id === id);
+    return member ? member.name : null;
+  };
+
+  const selectedFamilyMemberName = selectedFamilyMember !== 'all-members'
+    ? getFamilyMemberName(selectedFamilyMember)
+    : null;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -225,7 +236,12 @@ const IncomePage = () => {
       </div>
 
       {/* Income Overview */}
-      <IncomeSummary totalIncome={totalIncome} averageIncome={averageIncome} />
+      <IncomeSummary 
+        totalIncome={totalIncome} 
+        averageIncome={averageIncome} 
+        entriesCount={filteredIncomes.length}
+        selectedFamilyMemberName={selectedFamilyMemberName}
+      />
       
       {/* Income List with Time Filters */}
       <Card>
@@ -248,6 +264,7 @@ const IncomePage = () => {
                 isLoading={isLoading}
                 onEditIncome={startEditIncome}
                 onDeleteIncome={handleDeleteIncome}
+                categoryIdMap={{}}
               />
             </TabsContent>
           </Tabs>
