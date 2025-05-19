@@ -2,36 +2,29 @@ import axios from 'axios';
 
 const API_URL = 'http://localhost:3001';
 
-// Types
+// Interfaces
 export interface Family {
-  family_id: number;
+  family_id: string;
   name: string;
 }
 
 export interface FamilyMember {
   id: string;
-  family_id: number;
   name: string;
-  relationship: string;
-  is_default: boolean;
-  family_name?: string;
+  relation?: string;
+  is_default?: boolean;
+  [key: string]: any;
 }
 
-export interface ApiResponse {
-  success: boolean;
-  message: string;
-  id?: string;
-}
-
-// Mock data for development/fallback
-const mockFamilies: Family[] = [
-  { family_id: 1, name: 'Default Family' }
+// Dummy data for fallback
+const dummyFamilies: Family[] = [
+  { family_id: '1', name: 'Default Family' }
 ];
 
-const mockFamilyMembers: FamilyMember[] = [
-  { id: '1', family_id: 1, name: 'Self', relationship: 'Self', is_default: true },
-  { id: '2', family_id: 1, name: 'Spouse', relationship: 'Spouse', is_default: false },
-  { id: '3', family_id: 1, name: 'Child', relationship: 'Child', is_default: false }
+const dummyFamilyMembers: FamilyMember[] = [
+  { id: '1', name: 'Self', relation: 'Self', is_default: true },
+  { id: '2', name: 'Spouse', relation: 'Spouse' },
+  { id: '3', name: 'Child', relation: 'Child' }
 ];
 
 // Get all families
@@ -41,149 +34,121 @@ export const getAllFamilies = async (): Promise<Family[]> => {
     return response.data;
   } catch (error) {
     console.error('Error fetching families:', error);
-    return mockFamilies; // Fallback to mock data
+    console.log('Using dummy family data');
+    return dummyFamilies;
   }
 };
 
 // Get family by ID
-export const getFamilyById = async (id: number): Promise<Family | null> => {
+export const getFamilyById = async (id: string): Promise<Family> => {
   try {
     const response = await axios.get(`${API_URL}/api/families/${id}`);
     return response.data;
   } catch (error) {
-    console.error('Error fetching family by ID:', error);
-    return mockFamilies.find(family => family.family_id === id) || null;
+    console.error(`Error fetching family with ID ${id}:`, error);
+    console.log('Using dummy family data');
+    return dummyFamilies[0];
   }
 };
 
-// Add new family
-export const addFamily = async (name: string): Promise<ApiResponse> => {
+// Create new family
+export const createFamily = async (name: string): Promise<Family> => {
   try {
     const response = await axios.post(`${API_URL}/api/families`, { name });
-    return { 
-      success: true, 
-      message: 'Family added successfully',
-      id: response.data.id
-    };
-  } catch (error: any) {
-    console.error('Error adding family:', error);
-    return { 
-      success: false, 
-      message: error.response?.data?.message || 'Failed to add family' 
-    };
+    return response.data;
+  } catch (error) {
+    console.error('Error creating family:', error);
+    throw error;
   }
 };
 
 // Update family
-export const updateFamily = async (id: number, name: string): Promise<ApiResponse> => {
+export const updateFamily = async (id: string, name: string): Promise<Family> => {
   try {
-    await axios.put(`${API_URL}/api/families/${id}`, { name });
-    return { 
-      success: true, 
-      message: 'Family updated successfully' 
-    };
-  } catch (error: any) {
-    console.error('Error updating family:', error);
-    return { 
-      success: false, 
-      message: error.response?.data?.message || 'Failed to update family' 
-    };
+    const response = await axios.put(`${API_URL}/api/families/${id}`, { name });
+    return response.data;
+  } catch (error) {
+    console.error(`Error updating family with ID ${id}:`, error);
+    throw error;
   }
 };
 
 // Delete family
-export const deleteFamily = async (id: number): Promise<ApiResponse> => {
+export const deleteFamily = async (id: string): Promise<void> => {
   try {
     await axios.delete(`${API_URL}/api/families/${id}`);
-    return { 
-      success: true, 
-      message: 'Family deleted successfully' 
-    };
-  } catch (error: any) {
-    console.error('Error deleting family:', error);
-    return { 
-      success: false, 
-      message: error.response?.data?.message || 'Failed to delete family' 
-    };
+  } catch (error) {
+    console.error(`Error deleting family with ID ${id}:`, error);
+    throw error;
   }
 };
 
-// Get all family members - Ensuring it works with no parameters
-export const getAllFamilyMembers = async (familyId?: number): Promise<FamilyMember[]> => {
+// Get all family members
+export const getAllFamilyMembers = async (familyId?: string): Promise<FamilyMember[]> => {
   try {
-    const url = familyId 
-      ? `${API_URL}/api/family/members?family_id=${familyId}`
-      : `${API_URL}/api/family/members`;
-      
+    // Updated endpoint to match the route in index.js
+    const url = familyId ? `${API_URL}/api/family-members?family_id=${familyId}` : `${API_URL}/api/family-members`;
     const response = await axios.get(url);
     return response.data;
   } catch (error) {
     console.error('Error fetching family members:', error);
-    return mockFamilyMembers; // Fallback to mock data
+    console.log('Using dummy family members data');
+    return dummyFamilyMembers;
   }
 };
 
-// Add new family member
-export const addFamilyMember = async (memberData: Omit<FamilyMember, 'id' | 'family_id'> & { family_id?: number }): Promise<ApiResponse> => {
+// Get family member by ID
+export const getFamilyMemberById = async (id: string): Promise<FamilyMember> => {
   try {
-    const response = await axios.post(`${API_URL}/api/family/members`, memberData);
-    return { 
-      success: true, 
-      message: 'Family member added successfully',
-      id: response.data.id
-    };
-  } catch (error: any) {
-    console.error('Error adding family member:', error);
-    return { 
-      success: false, 
-      message: error.response?.data?.message || 'Failed to add family member' 
-    };
+    const response = await axios.get(`${API_URL}/api/family-members/${id}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching family member with ID ${id}:`, error);
+    const member = dummyFamilyMembers.find(m => m.id === id) || dummyFamilyMembers[0];
+    console.log('Using dummy family member data:', member);
+    return member;
+  }
+};
+
+// Create new family member
+export const createFamilyMember = async (familyMember: Omit<FamilyMember, 'id'>): Promise<FamilyMember> => {
+  try {
+    const response = await axios.post(`${API_URL}/api/family-members`, familyMember);
+    return response.data;
+  } catch (error) {
+    console.error('Error creating family member:', error);
+    throw error;
   }
 };
 
 // Update family member
-export const updateFamilyMember = async (id: string, memberData: Omit<FamilyMember, 'id' | 'family_id'> & { family_id?: number }): Promise<ApiResponse> => {
+export const updateFamilyMember = async (id: string, familyMember: Partial<FamilyMember>): Promise<FamilyMember> => {
   try {
-    await axios.put(`${API_URL}/api/family/members/${id}`, memberData);
-    return { 
-      success: true, 
-      message: 'Family member updated successfully' 
-    };
-  } catch (error: any) {
-    console.error('Error updating family member:', error);
-    return { 
-      success: false, 
-      message: error.response?.data?.message || 'Failed to update family member' 
-    };
+    const response = await axios.put(`${API_URL}/api/family-members/${id}`, familyMember);
+    return response.data;
+  } catch (error) {
+    console.error(`Error updating family member with ID ${id}:`, error);
+    throw error;
   }
 };
 
 // Delete family member
-export const deleteFamilyMember = async (id: string): Promise<ApiResponse> => {
+export const deleteFamilyMember = async (id: string): Promise<void> => {
   try {
-    await axios.delete(`${API_URL}/api/family/members/${id}`);
-    return { 
-      success: true, 
-      message: 'Family member deleted successfully' 
-    };
-  } catch (error: any) {
-    console.error('Error deleting family member:', error);
-    return { 
-      success: false, 
-      message: error.response?.data?.message || 'Failed to delete family member' 
-    };
+    await axios.delete(`${API_URL}/api/family-members/${id}`);
+  } catch (error) {
+    console.error(`Error deleting family member with ID ${id}:`, error);
+    throw error;
   }
 };
 
 // Get default family member
-export const getDefaultFamilyMember = async (familyId?: number): Promise<FamilyMember | null> => {
+export const getDefaultFamilyMember = async (familyId?: string): Promise<FamilyMember | null> => {
   try {
     const members = await getAllFamilyMembers(familyId);
-    const defaultMember = members.find(member => member.is_default);
-    return defaultMember || null;
+    return members.find(member => member.is_default) || null;
   } catch (error) {
     console.error('Error getting default family member:', error);
-    const defaultMember = mockFamilyMembers.find(member => member.is_default);
-    return defaultMember || null;
+    return dummyFamilyMembers.find(m => m.is_default) || null;
   }
 };

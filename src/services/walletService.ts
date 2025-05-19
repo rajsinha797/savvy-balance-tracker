@@ -164,6 +164,7 @@ export const formatDateForDisplay = (dateString: string): string => {
 
 export const getAllWalletTypes = async (): Promise<WalletType[]> => {
   try {
+    // Fix the API endpoint
     const response = await axios.get(`${API_URL}/api/wallet/types`);
     return response.data;
   } catch (error) {

@@ -195,12 +195,13 @@ const WalletForm: React.FC<WalletFormProps> = ({
             <SelectValue placeholder="Select wallet subcategory (optional)" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">None</SelectItem>
+            {/* Fix: Ensure non-empty value for SelectItem */}
             {subcategories.map((subcategory) => (
               <SelectItem key={subcategory.id} value={String(subcategory.id)}>
                 {subcategory.name}
               </SelectItem>
             ))}
+            <SelectItem value="none">None</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -215,7 +216,8 @@ const WalletForm: React.FC<WalletFormProps> = ({
             <SelectValue placeholder="Select family member (optional)" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">None</SelectItem>
+            {/* Fix: Ensure non-empty value for SelectItem */}
+            <SelectItem value="none">None</SelectItem>
             {familyMembers.map((member) => (
               <SelectItem key={member.id} value={String(member.id)}>
                 {member.name}

@@ -33,7 +33,7 @@ const ExpensesPage = () => {
     deleteExpense: deleteExpenseItem
   } = useExpenseApi(selectedFamilyMember !== 'all-members' ? selectedFamilyMember : undefined);
   
-  // New expense form data state with the enhanced categorization structure
+  // New expense form data state with the enhanced categorization structure and wallet
   const [newExpense, setNewExpense] = useState<{ 
     amount: number; 
     expense_type_id: number;
@@ -42,6 +42,7 @@ const ExpensesPage = () => {
     description: string; 
     date: string;
     family_member_id: string;
+    wallet_id: number | null;
   }>({ 
     amount: 0, 
     expense_type_id: 0,
@@ -49,15 +50,17 @@ const ExpensesPage = () => {
     expense_sub_category_id: 0, 
     description: '', 
     date: new Date().toISOString().split('T')[0],
-    family_member_id: '' 
+    family_member_id: '',
+    wallet_id: null
   });
   
-  // State for editing expense
+  // State for editing expense with wallet
   const [editingExpense, setEditingExpense] = useState<(ExpenseItem & { 
     expense_type_id: number,
     expense_category_id: number,
     expense_sub_category_id: number, 
-    family_member_id: string 
+    family_member_id: string,
+    wallet_id: number | null
   }) | null>(null);
 
   // Set default family member when family members data is loaded
@@ -100,7 +103,8 @@ const ExpensesPage = () => {
       expense_sub_category_id: 0,
       description: '', 
       date: new Date().toISOString().split('T')[0],
-      family_member_id: newExpense.family_member_id
+      family_member_id: newExpense.family_member_id,
+      wallet_id: null
     });
     setIsDialogOpen(false);
   };
@@ -118,7 +122,8 @@ const ExpensesPage = () => {
       expense_sub_category_id, 
       description, 
       date, 
-      family_member_id 
+      family_member_id,
+      wallet_id
     } = editingExpense;
     
     updateExpenseItem({
@@ -130,7 +135,8 @@ const ExpensesPage = () => {
         expense_sub_category_id,
         description,
         date,
-        family_member_id
+        family_member_id,
+        wallet_id
       }
     });
     
@@ -177,7 +183,8 @@ const ExpensesPage = () => {
       expense_type_id: expense.expense_type_id || 0,
       expense_category_id: expense.expense_category_id || 0,
       expense_sub_category_id: expense.expense_sub_category_id || 0,
-      family_member_id: expense.family_member_id || ''
+      family_member_id: expense.family_member_id || '',
+      wallet_id: expense.wallet_id || null
     };
     
     setEditingExpense(formattedExpense);

@@ -1,42 +1,41 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Check, Calendar as CalendarIcon } from 'lucide-react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { 
-  IncomeCategory, 
-  IncomeItem, 
-  IncomeType,
-  IncomeCategoryWithTypeId,
-  IncomeSubCategory
-} from '@/services/incomeService';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Loader2 } from 'lucide-react';
+import { IncomeCategory } from '@/services/incomeService';
 import { FamilyMember } from '@/services/familyService';
-import { format } from 'date-fns';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { cn } from '@/lib/utils';
+import { useWalletApi } from '@/hooks/useWalletApi';
 
 interface IncomeFormProps {
   isEditing: boolean;
   formData: {
+    id?: string | number;
     amount: number;
-    category_id?: number; // Kept for backward compatibility
     income_type_id: number;
     income_category_id: number;
     income_sub_category_id: number;
-    description: string;
     date: string;
-    family_member_id: string;
+    description: string;
+    family_member_id?: string;
+    wallet_id?: number | null;
   };
   onFormChange: (field: string, value: string | number) => void;
   onSubmit: () => void;
-  categories: IncomeCategory[]; // Legacy categories, kept for backward compatibility
-  incomeTypes: IncomeType[]; // New types
+  categories: IncomeCategory[];
+  incomeTypes: any[]; // Type will be determined by API response
+  getIncomeCategoriesByType: (typeId: number) => Promise<any[]>;
+  getIncomeSubCategoriesByCategory: (categoryId: number) => Promise<any[]>;
   familyMembers: FamilyMember[];
-  getIncomeCategoriesByType: (typeId: number) => Promise<IncomeCategoryWithTypeId[]>;
-  getIncomeSubCategoriesByCategory: (categoryId: number) => Promise<IncomeSubCategory[]>;
 }
 
 const IncomeForm: React.FC<IncomeFormProps> = ({
@@ -45,93 +44,102 @@ const IncomeForm: React.FC<IncomeFormProps> = ({
   onFormChange,
   onSubmit,
   categories,
-  incomeTypes = [],
-  familyMembers,
+  incomeTypes,
   getIncomeCategoriesByType,
-  getIncomeSubCategoriesByCategory
+  getIncomeSubCategoriesByCategory,
+  familyMembers,
 }) => {
-  const [incomeCategories, setIncomeCategories] = useState<IncomeCategoryWithTypeId[]>([]);
-  const [incomeSubCategories, setIncomeSubCategories] = useState<IncomeSubCategory[]>([]);
+  const [incomeCategories, setIncomeCategories] = useState<any[]>([]);
+  const [incomeSubCategories, setIncomeSubCategories] = useState<any[]>([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(false);
   const [isLoadingSubCategories, setIsLoadingSubCategories] = useState(false);
-  const [date, setDate] = useState<Date | undefined>(
-    formData.date ? new Date(formData.date) : undefined
-  );
-
-  // Fetch categories when type changes
+  const { availableWallets, isLoadingWallets } = useWalletApi();
+  
+  // Load categories when type changes
   useEffect(() => {
-    if (formData.income_type_id) {
+    const loadCategories = async () => {
+      if (!formData.income_type_id) return;
+      
       setIsLoadingCategories(true);
-      getIncomeCategoriesByType(formData.income_type_id)
-        .then(categories => {
-          setIncomeCategories(categories);
-          setIsLoadingCategories(false);
-        })
-        .catch(() => {
-          setIsLoadingCategories(false);
-        });
-    } else {
-      setIncomeCategories([]);
-    }
-  }, [formData.income_type_id, getIncomeCategoriesByType]);
+      try {
+        const categoriesData = await getIncomeCategoriesByType(formData.income_type_id);
+        setIncomeCategories(categoriesData);
+        
+        // Reset category and subcategory if the type changes
+        if (!isEditing) {
+          onFormChange('income_category_id', 0);
+          onFormChange('income_sub_category_id', 0);
+        }
+      } catch (error) {
+        console.error('Error loading income categories:', error);
+      } finally {
+        setIsLoadingCategories(false);
+      }
+    };
+    
+    loadCategories();
+  }, [formData.income_type_id, getIncomeCategoriesByType, isEditing, onFormChange]);
 
-  // Fetch subcategories when category changes
+  // Load subcategories when category changes
   useEffect(() => {
-    if (formData.income_category_id) {
+    const loadSubCategories = async () => {
+      if (!formData.income_category_id) return;
+      
       setIsLoadingSubCategories(true);
-      getIncomeSubCategoriesByCategory(formData.income_category_id)
-        .then(subCategories => {
-          setIncomeSubCategories(subCategories);
-          setIsLoadingSubCategories(false);
-        })
-        .catch(() => {
-          setIsLoadingSubCategories(false);
-        });
-    } else {
-      setIncomeSubCategories([]);
-    }
-  }, [formData.income_category_id, getIncomeSubCategoriesByCategory]);
-
-  const handleDateSelect = (selectedDate: Date | undefined) => {
-    if (selectedDate) {
-      setDate(selectedDate);
-      onFormChange('date', format(selectedDate, 'yyyy-MM-dd'));
-    }
-  };
+      try {
+        const subCategoriesData = await getIncomeSubCategoriesByCategory(formData.income_category_id);
+        setIncomeSubCategories(subCategoriesData);
+        
+        // Reset subcategory if the category changes
+        if (!isEditing) {
+          onFormChange('income_sub_category_id', 0);
+        }
+      } catch (error) {
+        console.error('Error loading income subcategories:', error);
+      } finally {
+        setIsLoadingSubCategories(false);
+      }
+    };
+    
+    loadSubCategories();
+  }, [formData.income_category_id, getIncomeSubCategoriesByCategory, isEditing, onFormChange]);
 
   return (
-    <div className="grid gap-4 py-4">
-      <div className="grid gap-2">
+    <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); onSubmit(); }}>
+      <div className="space-y-2">
         <Label htmlFor="amount">Amount</Label>
         <Input
           id="amount"
           type="number"
+          placeholder="Enter amount"
           value={formData.amount || ''}
-          onChange={(e) => {
-            const value = parseFloat(e.target.value);
-            onFormChange('amount', value || 0);
-          }}
-          className="bg-fintrack-bg-dark border-fintrack-bg-dark"
+          onChange={(e) => onFormChange('amount', e.target.value ? parseFloat(e.target.value) : 0)}
+          className="bg-fintrack-input"
         />
       </div>
       
-      {/* Income Type Selection */}
-      <div className="grid gap-2">
-        <Label htmlFor="income_type_id">Income Type</Label>
+      <div className="space-y-2">
+        <Label htmlFor="date">Date</Label>
+        <Input
+          id="date"
+          type="date"
+          value={formData.date || ''}
+          onChange={(e) => onFormChange('date', e.target.value)}
+          className="bg-fintrack-input"
+        />
+      </div>
+      
+      {/* New Income Type Select */}
+      <div className="space-y-2">
+        <Label htmlFor="income-type">Income Type</Label>
         <Select
-          value={String(formData.income_type_id || "")}
-          onValueChange={(value) => {
-            const typeId = parseInt(value);
-            onFormChange('income_type_id', typeId);
-            // Reset category and subcategory when type changes
-            onFormChange('income_category_id', 0);
-            onFormChange('income_sub_category_id', 0);
-          }}
+          value={formData.income_type_id ? String(formData.income_type_id) : ''}
+          onValueChange={(value) => onFormChange('income_type_id', parseInt(value))}
         >
-          <SelectTrigger className="bg-fintrack-bg-dark border-fintrack-bg-dark">
+          <SelectTrigger id="income-type" className="bg-fintrack-input">
             <SelectValue placeholder="Select income type" />
           </SelectTrigger>
-          <SelectContent className="bg-fintrack-card-dark border-fintrack-bg-dark">
+          <SelectContent>
             {incomeTypes.map((type) => (
               <SelectItem key={type.id} value={String(type.id)}>
                 {type.name}
@@ -141,23 +149,21 @@ const IncomeForm: React.FC<IncomeFormProps> = ({
         </Select>
       </div>
       
-      {/* Income Category Selection */}
-      <div className="grid gap-2">
-        <Label htmlFor="income_category_id">Income Category</Label>
+      {/* New Income Category Select */}
+      <div className="space-y-2">
+        <Label htmlFor="income-category">
+          Income Category
+          {isLoadingCategories && <Loader2 className="h-4 w-4 inline ml-2 animate-spin" />}
+        </Label>
         <Select
-          value={String(formData.income_category_id || "")}
-          onValueChange={(value) => {
-            const categoryId = parseInt(value);
-            onFormChange('income_category_id', categoryId);
-            // Reset subcategory when category changes
-            onFormChange('income_sub_category_id', 0);
-          }}
-          disabled={!formData.income_type_id || isLoadingCategories}
+          value={formData.income_category_id ? String(formData.income_category_id) : ''}
+          onValueChange={(value) => onFormChange('income_category_id', parseInt(value))}
+          disabled={isLoadingCategories || incomeCategories.length === 0}
         >
-          <SelectTrigger className="bg-fintrack-bg-dark border-fintrack-bg-dark">
-            <SelectValue placeholder={isLoadingCategories ? "Loading categories..." : "Select income category"} />
+          <SelectTrigger id="income-category" className="bg-fintrack-input">
+            <SelectValue placeholder="Select income category" />
           </SelectTrigger>
-          <SelectContent className="bg-fintrack-card-dark border-fintrack-bg-dark">
+          <SelectContent>
             {incomeCategories.map((category) => (
               <SelectItem key={category.id} value={String(category.id)}>
                 {category.name}
@@ -167,100 +173,92 @@ const IncomeForm: React.FC<IncomeFormProps> = ({
         </Select>
       </div>
       
-      {/* Income Sub Category Selection */}
-      <div className="grid gap-2">
-        <Label htmlFor="income_sub_category_id">Income Sub Category</Label>
+      {/* New Income Sub-Category Select */}
+      <div className="space-y-2">
+        <Label htmlFor="income-sub-category">
+          Income Sub-Category
+          {isLoadingSubCategories && <Loader2 className="h-4 w-4 inline ml-2 animate-spin" />}
+        </Label>
         <Select
-          value={String(formData.income_sub_category_id || "")}
-          onValueChange={(value) => {
-            const subCategoryId = parseInt(value);
-            onFormChange('income_sub_category_id', subCategoryId);
-          }}
-          disabled={!formData.income_category_id || isLoadingSubCategories}
+          value={formData.income_sub_category_id ? String(formData.income_sub_category_id) : ''}
+          onValueChange={(value) => onFormChange('income_sub_category_id', parseInt(value))}
+          disabled={isLoadingSubCategories || incomeSubCategories.length === 0}
         >
-          <SelectTrigger className="bg-fintrack-bg-dark border-fintrack-bg-dark">
-            <SelectValue placeholder={isLoadingSubCategories ? "Loading subcategories..." : "Select income subcategory"} />
+          <SelectTrigger id="income-sub-category" className="bg-fintrack-input">
+            <SelectValue placeholder="Select income sub-category" />
           </SelectTrigger>
-          <SelectContent className="bg-fintrack-card-dark border-fintrack-bg-dark">
-            {incomeSubCategories.map((subCategory) => (
-              <SelectItem key={subCategory.id} value={String(subCategory.id)}>
-                {subCategory.name}
+          <SelectContent>
+            {incomeSubCategories.map((subcategory) => (
+              <SelectItem key={subcategory.id} value={String(subcategory.id)}>
+                {subcategory.name}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
       </div>
-      
-      <div className="grid gap-2">
-        <Label htmlFor="family_member">Family Member</Label>
+
+      {/* Add Wallet Selection */}
+      <div className="space-y-2">
+        <Label htmlFor="wallet">
+          Deposit Wallet
+          {isLoadingWallets && <Loader2 className="h-4 w-4 inline ml-2 animate-spin" />}
+        </Label>
         <Select
-          value={String(formData.family_member_id || "")}
-          onValueChange={(value) => {
-            onFormChange('family_member_id', value);
-          }}
+          value={formData.wallet_id ? String(formData.wallet_id) : ''}
+          onValueChange={(value) => onFormChange('wallet_id', value ? parseInt(value) : 0)}
         >
-          <SelectTrigger className="bg-fintrack-bg-dark border-fintrack-bg-dark">
+          <SelectTrigger id="wallet" className="bg-fintrack-input">
+            <SelectValue placeholder="Select deposit wallet" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="0">None</SelectItem>
+            {availableWallets.map((wallet) => (
+              <SelectItem key={wallet.id} value={String(wallet.id)}>
+                {wallet.name} ({wallet.type_name})
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="family-member">Family Member (Optional)</Label>
+        <Select
+          value={formData.family_member_id || ''}
+          onValueChange={(value) => onFormChange('family_member_id', value)}
+        >
+          <SelectTrigger id="family-member" className="bg-fintrack-input">
             <SelectValue placeholder="Select family member" />
           </SelectTrigger>
-          <SelectContent className="bg-fintrack-card-dark border-fintrack-bg-dark">
+          <SelectContent>
+            <SelectItem value="">None</SelectItem>
             {familyMembers.map((member) => (
-              <SelectItem key={member.id} value={String(member.id || `member-${member.name}`)}>
-                {member.name} ({member.relationship})
+              <SelectItem key={member.id} value={String(member.id)}>
+                {member.name}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
       </div>
-      
-      <div className="grid gap-2">
-        <Label htmlFor="description">Description</Label>
-        <Input
+
+      <div className="space-y-2">
+        <Label htmlFor="description">Description (Optional)</Label>
+        <Textarea
           id="description"
-          value={formData.description}
-          onChange={(e) => {
-            onFormChange('description', e.target.value);
-          }}
-          className="bg-fintrack-bg-dark border-fintrack-bg-dark"
+          placeholder="Enter description"
+          value={formData.description || ''}
+          onChange={(e) => onFormChange('description', e.target.value)}
+          className="bg-fintrack-input"
         />
       </div>
-      
-      {/* Date Picker */}
-      <div className="grid gap-2">
-        <Label htmlFor="date">Date</Label>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              className={cn(
-                "w-full justify-start text-left font-normal bg-fintrack-bg-dark border-fintrack-bg-dark",
-                !date && "text-muted-foreground"
-              )}
-            >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {date ? format(date, "PPP") : <span>Pick a date</span>}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0 bg-fintrack-card-dark border-fintrack-bg-dark" align="start">
-            <Calendar
-              mode="single"
-              selected={date}
-              onSelect={handleDateSelect}
-              initialFocus
-              className="pointer-events-auto"
-            />
-          </PopoverContent>
-        </Popover>
-      </div>
-      
-      <Button 
-        onClick={onSubmit}
-        className="mt-2 bg-fintrack-purple hover:bg-fintrack-purple/90"
-        disabled={!formData.amount || !formData.income_type_id || !formData.income_category_id || !formData.income_sub_category_id || !date}
+
+      <Button
+        type="submit"
+        className="w-full bg-fintrack-purple hover:bg-fintrack-purple/90"
       >
-        <Check className="h-4 w-4 mr-2" />
-        {isEditing ? 'Update Income' : 'Add Income'}
+        {isEditing ? 'Update' : 'Add'} Income
       </Button>
-    </div>
+    </form>
   );
 };
 

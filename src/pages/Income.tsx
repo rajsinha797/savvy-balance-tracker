@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
@@ -34,7 +33,7 @@ const IncomePage = () => {
     deleteIncome: deleteIncomeItem 
   } = useIncomeApi(selectedFamilyMember !== 'all-members' ? selectedFamilyMember : undefined);
   
-  // New income form data state with the enhanced categorization structure
+  // New income form data state with the enhanced categorization structure and wallet
   const [newIncome, setNewIncome] = useState<{ 
     amount: number; 
     income_type_id: number;
@@ -43,6 +42,7 @@ const IncomePage = () => {
     description: string; 
     date: string;
     family_member_id: string;
+    wallet_id: number | null;
   }>({ 
     amount: 0, 
     income_type_id: 0,
@@ -50,15 +50,17 @@ const IncomePage = () => {
     income_sub_category_id: 0,
     description: '', 
     date: new Date().toISOString().split('T')[0],
-    family_member_id: '' 
+    family_member_id: '',
+    wallet_id: null
   });
   
-  // State for editing income with the enhanced categorization structure
+  // State for editing income with the enhanced categorization structure and wallet
   const [editingIncome, setEditingIncome] = useState<(IncomeItem & { 
     income_type_id: number,
     income_category_id: number,
     income_sub_category_id: number,
-    family_member_id: string 
+    family_member_id: string,
+    wallet_id: number | null
   }) | null>(null);
 
   // Set default family member when family members data is loaded
@@ -93,7 +95,8 @@ const IncomePage = () => {
       income_sub_category_id: 0,
       description: '', 
       date: new Date().toISOString().split('T')[0],
-      family_member_id: newIncome.family_member_id // Keep the currently selected family member
+      family_member_id: newIncome.family_member_id, // Keep the currently selected family member
+      wallet_id: null
     });
     setIsDialogOpen(false);
   };
@@ -111,7 +114,8 @@ const IncomePage = () => {
       income_sub_category_id, 
       description, 
       date, 
-      family_member_id 
+      family_member_id,
+      wallet_id 
     } = editingIncome;
     
     updateIncomeItem({ 
@@ -123,7 +127,8 @@ const IncomePage = () => {
         income_sub_category_id, 
         description, 
         date, 
-        family_member_id 
+        family_member_id,
+        wallet_id 
       } 
     });
     
@@ -201,7 +206,7 @@ const IncomePage = () => {
         console.error("Error parsing date:", e);
       }
     }
-
+    
     console.log("Original date:", income.date, "Formatted date:", formattedDate);
     
     // Use the income's existing values for the enhanced categorization if available
@@ -211,7 +216,8 @@ const IncomePage = () => {
       income_type_id: income.income_type_id || 0,
       income_category_id: income.income_category_id || 0,
       income_sub_category_id: income.income_sub_category_id || 0,
-      family_member_id: income.family_member_id || ''
+      family_member_id: income.family_member_id || '',
+      wallet_id: income.wallet_id || null
     });
     
     setIsDialogOpen(true);

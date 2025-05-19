@@ -30,14 +30,16 @@ CREATE TABLE IF NOT EXISTS wallet_category (
   id INT AUTO_INCREMENT PRIMARY KEY,
   wallet_type_id INT NOT NULL,
   name VARCHAR(50) NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (wallet_type_id) REFERENCES wallet_type(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS wallet_sub_category (
   id INT AUTO_INCREMENT PRIMARY KEY,
   wallet_category_id INT NOT NULL,
   name VARCHAR(50) NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (wallet_category_id) REFERENCES wallet_category(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS wallet (
@@ -51,14 +53,19 @@ CREATE TABLE IF NOT EXISTS wallet (
   description TEXT,
   family_member_id VARCHAR(36),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (wallet_type_id) REFERENCES wallet_type(id) ON DELETE SET NULL,
+  FOREIGN KEY (wallet_category_id) REFERENCES wallet_category(id) ON DELETE SET NULL,
+  FOREIGN KEY (wallet_sub_category_id) REFERENCES wallet_sub_category(id) ON DELETE SET NULL
 );
 
 -- Add wallet_id to income table if it doesn't exist
 ALTER TABLE income ADD COLUMN IF NOT EXISTS wallet_id INT NULL;
+ALTER TABLE income ADD CONSTRAINT IF NOT EXISTS fk_income_wallet FOREIGN KEY (wallet_id) REFERENCES wallet(id) ON DELETE SET NULL;
 
 -- Add wallet_id to expenses table if it doesn't exist
 ALTER TABLE expenses ADD COLUMN IF NOT EXISTS wallet_id INT NULL;
+ALTER TABLE expenses ADD CONSTRAINT IF NOT EXISTS fk_expenses_wallet FOREIGN KEY (wallet_id) REFERENCES wallet(id) ON DELETE SET NULL;
 
 -- Insert default wallet types if they don't exist
 INSERT IGNORE INTO wallet_type (id, name, is_expense) VALUES

@@ -24,7 +24,8 @@ const dummyExpenseCategories: ExpenseCategory[] = [
 
 export const getAllExpenseCategories = async (): Promise<ExpenseCategory[]> => {
   try {
-    const response = await axios.get(`${API_URL}/api/expenses/expense-categories`);
+    // Updated API endpoint to match the route in expenseRoutes.js
+    const response = await axios.get(`${API_URL}/api/expenses/categories`);
     return response.data;
   } catch (error) {
     console.error('Error fetching expense categories:', error);

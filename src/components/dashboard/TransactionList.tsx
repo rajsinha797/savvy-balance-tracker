@@ -39,7 +39,7 @@ const TransactionList: React.FC<TransactionListProps> = ({
             <tbody>
               {transactions.map((transaction) => (
                 <tr 
-                  key={transaction.id} 
+                  key={`${transaction.id}-${transaction.type}`} 
                   className="border-b border-fintrack-bg-dark hover:bg-fintrack-bg-dark/50 transition-colors"
                 >
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
