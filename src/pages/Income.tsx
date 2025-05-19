@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
@@ -145,7 +146,7 @@ const IncomePage = () => {
       description: editingIncome.description || '',
       date: editingIncome.date || new Date().toISOString().split('T')[0],
       family_member_id: editingIncome.family_member_id || '', 
-      wallet_id: editingIncome.wallet_id || null  // Ensure this is optional but matches IncomeFormData
+      wallet_id: editingIncome.wallet_id || null
     };
     
     updateIncomeItem({

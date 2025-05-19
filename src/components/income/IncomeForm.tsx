@@ -247,15 +247,15 @@ const IncomeForm: React.FC<IncomeFormProps> = ({
         <div className="space-y-2">
           <Label htmlFor="wallet">Deposit to Wallet (Optional)</Label>
           <Select
-            value={formData.wallet_id ? formData.wallet_id.toString() : ""}
-            onValueChange={(value) => onFormChange('wallet_id', value ? parseInt(value) : null)}
+            value={formData.wallet_id ? formData.wallet_id.toString() : "none"}
+            onValueChange={(value) => onFormChange('wallet_id', value === "none" ? null : parseInt(value))}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select a wallet (optional)" />
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
-                <SelectItem value="">None (Don't deposit)</SelectItem>
+                <SelectItem value="none">None (Don't deposit)</SelectItem>
                 {availableWallets && availableWallets.length > 0 ? (
                   availableWallets.map((wallet) => (
                     <SelectItem key={wallet.id} value={wallet.id.toString()}>
