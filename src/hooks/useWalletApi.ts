@@ -13,8 +13,8 @@ import {
   WalletCategoryWithTypeId,
   WalletSubCategory,
   getAllWalletTypes,
-  getWalletCategoriesByTypeId,
-  getWalletSubCategoriesByCategoryId,
+  getWalletCategoriesByType,
+  getWalletSubCategoriesByCategory,
   getAvailableWallets
 } from '@/services/walletService';
 
@@ -84,9 +84,9 @@ export const useWalletApi = (familyMemberId?: string) => {
   });
 
   // Function to fetch wallet categories based on type
-  const getWalletCategoriesByType = async (typeId: number) => {
+  const getWalletCategoriesByTypeId = async (typeId: number) => {
     try {
-      return await getWalletCategoriesByTypeId(typeId);
+      return await getWalletCategoriesByType(typeId);
     } catch (error) {
       console.error(`Error fetching wallet categories for type ${typeId}:`, error);
       toast({
@@ -99,9 +99,9 @@ export const useWalletApi = (familyMemberId?: string) => {
   };
 
   // Function to fetch wallet subcategories based on category
-  const getWalletSubCategoriesByCategory = async (categoryId: number) => {
+  const getWalletSubCategoriesByCategoryId = async (categoryId: number) => {
     try {
-      return await getWalletSubCategoriesByCategoryId(categoryId);
+      return await getWalletSubCategoriesByCategory(categoryId);
     } catch (error) {
       console.error(`Error fetching wallet subcategories for category ${categoryId}:`, error);
       toast({
@@ -185,8 +185,8 @@ export const useWalletApi = (familyMemberId?: string) => {
     wallets,
     walletTypes,
     availableWallets,
-    getWalletCategoriesByType,
-    getWalletSubCategoriesByCategory,
+    getWalletCategoriesByType: getWalletCategoriesByTypeId,
+    getWalletSubCategoriesByCategory: getWalletSubCategoriesByCategoryId,
     isLoadingWallets,
     isLoadingWalletTypes,
     isErrorWallets,
