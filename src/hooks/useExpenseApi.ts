@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   ExpenseItem, 
@@ -10,11 +9,12 @@ import {
   getAllExpenseTypes,
   getExpenseCategoriesByType,
   getExpenseSubcategoriesByCategory,
-  addExpense, 
+  createExpense, 
   updateExpense, 
   deleteExpense,
   ExpenseFormData
 } from '@/services/expenseService';
+import { ExpenseCategory } from '@/services/expenseCategoryService';
 import { useToast } from "@/hooks/use-toast";
 
 export const useExpenseApi = (familyMemberId?: string) => {
@@ -114,8 +114,8 @@ export const useExpenseApi = (familyMemberId?: string) => {
 
   // Mutation for adding expense
   const addExpenseMutation = useMutation({
-    mutationFn: (newExpenseData: ExpenseFormData) => addExpense(newExpenseData),
-    onSuccess: (result) => {
+    mutationFn: (newExpenseData: ExpenseFormData) => createExpense(newExpenseData),
+    onSuccess: (result: { success: boolean; message: string }) => {
       if (result.success) {
         // Invalidate queries to refetch data
         queryClient.invalidateQueries({ queryKey: ['expenses'] });
@@ -146,7 +146,7 @@ export const useExpenseApi = (familyMemberId?: string) => {
   const updateExpenseMutation = useMutation({
     mutationFn: (params: { id: string | number; expense: ExpenseFormData }) => 
       updateExpense(params.id, params.expense),
-    onSuccess: (result) => {
+    onSuccess: (result: { success: boolean; message: string }) => {
       if (result.success) {
         // Invalidate queries to refetch data
         queryClient.invalidateQueries({ queryKey: ['expenses'] });
@@ -176,7 +176,7 @@ export const useExpenseApi = (familyMemberId?: string) => {
   // Mutation for deleting expense
   const deleteExpenseMutation = useMutation({
     mutationFn: (id: string | number) => deleteExpense(id),
-    onSuccess: (result) => {
+    onSuccess: (result: { success: boolean; message: string }) => {
       if (result.success) {
         // Invalidate queries to refetch data
         queryClient.invalidateQueries({ queryKey: ['expenses'] });

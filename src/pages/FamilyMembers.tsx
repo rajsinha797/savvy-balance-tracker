@@ -272,6 +272,7 @@ const FamilyMembersPage = () => {
         </Dialog>
       </div>
       
+      {/* Family members list */}
       <Card>
         <CardContent className="pt-6">
           <div className="space-y-2">

@@ -13,7 +13,8 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2 } from 'lucide-react';
-import { ExpenseCategory, ExpenseType } from '@/services/expenseService';
+import { ExpenseSubCategory, ExpenseType } from '@/services/expenseService';
+import { ExpenseCategory } from '@/services/expenseCategoryService';
 import { FamilyMember } from '@/services/familyService';
 import { Wallet } from '@/services/walletService';
 

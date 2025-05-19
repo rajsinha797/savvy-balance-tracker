@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
@@ -125,8 +124,8 @@ const IncomePage = () => {
       income_sub_category_id: newIncome.income_sub_category_id,
       description: newIncome.description,
       date: newIncome.date,
-      family_member_id: newIncome.family_member_id || undefined,
-      wallet_id: newIncome.wallet_id || null
+      family_member_id: newIncome.family_member_id,
+      wallet_id: newIncome.wallet_id
     };
 
     addIncomeItem(formData);
