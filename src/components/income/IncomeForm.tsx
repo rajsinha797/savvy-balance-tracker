@@ -205,16 +205,16 @@ const IncomeForm: React.FC<IncomeFormProps> = ({
         </Label>
         <Select
           value={formData.wallet_id ? String(formData.wallet_id) : ''}
-          onValueChange={(value) => onFormChange('wallet_id', value ? parseInt(value) : 0)}
+          onValueChange={(value) => onFormChange('wallet_id', value ? parseInt(value) : null)}
         >
           <SelectTrigger id="wallet" className="bg-fintrack-input">
             <SelectValue placeholder="Select deposit wallet" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="0">None</SelectItem>
+            <SelectItem value="">None</SelectItem>
             {availableWallets.map((wallet) => (
               <SelectItem key={wallet.id} value={String(wallet.id)}>
-                {wallet.name} ({wallet.type_name})
+                {wallet.name} ({wallet.wallet_type_name || wallet.type_name})
               </SelectItem>
             ))}
           </SelectContent>

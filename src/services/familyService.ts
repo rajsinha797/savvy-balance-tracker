@@ -1,3 +1,4 @@
+
 import axios from 'axios';
 
 const API_URL = 'http://localhost:3001';
@@ -14,6 +15,13 @@ export interface FamilyMember {
   relation?: string;
   is_default?: boolean;
   [key: string]: any;
+}
+
+// Response interfaces
+export interface ApiResponse {
+  success: boolean;
+  message: string;
+  id?: string | number;
 }
 
 // Dummy data for fallback
@@ -52,34 +60,54 @@ export const getFamilyById = async (id: string): Promise<Family> => {
 };
 
 // Create new family
-export const createFamily = async (name: string): Promise<Family> => {
+export const addFamily = async (name: string): Promise<ApiResponse> => {
   try {
     const response = await axios.post(`${API_URL}/api/families`, { name });
-    return response.data;
+    return {
+      success: true,
+      message: 'Family added successfully',
+      id: response.data.id
+    };
   } catch (error) {
-    console.error('Error creating family:', error);
-    throw error;
+    console.error('Error adding family:', error);
+    return {
+      success: false,
+      message: 'Failed to add family'
+    };
   }
 };
 
 // Update family
-export const updateFamily = async (id: string, name: string): Promise<Family> => {
+export const updateFamily = async (id: string, name: string): Promise<ApiResponse> => {
   try {
-    const response = await axios.put(`${API_URL}/api/families/${id}`, { name });
-    return response.data;
+    await axios.put(`${API_URL}/api/families/${id}`, { name });
+    return {
+      success: true,
+      message: 'Family updated successfully'
+    };
   } catch (error) {
     console.error(`Error updating family with ID ${id}:`, error);
-    throw error;
+    return {
+      success: false,
+      message: 'Failed to update family'
+    };
   }
 };
 
 // Delete family
-export const deleteFamily = async (id: string): Promise<void> => {
+export const deleteFamily = async (id: string): Promise<ApiResponse> => {
   try {
     await axios.delete(`${API_URL}/api/families/${id}`);
+    return {
+      success: true,
+      message: 'Family deleted successfully'
+    };
   } catch (error) {
     console.error(`Error deleting family with ID ${id}:`, error);
-    throw error;
+    return {
+      success: false,
+      message: 'Failed to delete family'
+    };
   }
 };
 
@@ -111,34 +139,54 @@ export const getFamilyMemberById = async (id: string): Promise<FamilyMember> => 
 };
 
 // Create new family member
-export const createFamilyMember = async (familyMember: Omit<FamilyMember, 'id'>): Promise<FamilyMember> => {
+export const addFamilyMember = async (familyMember: Omit<FamilyMember, 'id'>): Promise<ApiResponse> => {
   try {
     const response = await axios.post(`${API_URL}/api/family-members`, familyMember);
-    return response.data;
+    return {
+      success: true,
+      message: 'Family member added successfully',
+      id: response.data.id
+    };
   } catch (error) {
-    console.error('Error creating family member:', error);
-    throw error;
+    console.error('Error adding family member:', error);
+    return {
+      success: false,
+      message: 'Failed to add family member'
+    };
   }
 };
 
 // Update family member
-export const updateFamilyMember = async (id: string, familyMember: Partial<FamilyMember>): Promise<FamilyMember> => {
+export const updateFamilyMember = async (id: string, familyMember: Partial<FamilyMember>): Promise<ApiResponse> => {
   try {
-    const response = await axios.put(`${API_URL}/api/family-members/${id}`, familyMember);
-    return response.data;
+    await axios.put(`${API_URL}/api/family-members/${id}`, familyMember);
+    return {
+      success: true,
+      message: 'Family member updated successfully'
+    };
   } catch (error) {
     console.error(`Error updating family member with ID ${id}:`, error);
-    throw error;
+    return {
+      success: false,
+      message: 'Failed to update family member'
+    };
   }
 };
 
 // Delete family member
-export const deleteFamilyMember = async (id: string): Promise<void> => {
+export const deleteFamilyMember = async (id: string): Promise<ApiResponse> => {
   try {
     await axios.delete(`${API_URL}/api/family-members/${id}`);
+    return {
+      success: true,
+      message: 'Family member deleted successfully'
+    };
   } catch (error) {
     console.error(`Error deleting family member with ID ${id}:`, error);
-    throw error;
+    return {
+      success: false,
+      message: 'Failed to delete family member'
+    };
   }
 };
 

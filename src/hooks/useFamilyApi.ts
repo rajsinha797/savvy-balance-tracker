@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { 
   Family,
   FamilyMember,
+  ApiResponse,
   getAllFamilies,
   getFamilyById,
   addFamily,
@@ -51,11 +52,12 @@ export const useFamilyApi = (initialFamilyId: number = 1) => {
     setIsLoading(true);
     try {
       const fid = familyId || currentFamilyId;
-      const membersData = await getAllFamilyMembers(fid);
+      // Convert number to string for the API call
+      const membersData = await getAllFamilyMembers(String(fid));
       setFamilyMembers(membersData);
       
       // Also load default member
-      const defaultMemberData = await getDefaultFamilyMember(fid);
+      const defaultMemberData = await getDefaultFamilyMember(String(fid));
       setDefaultMember(defaultMemberData);
       
       setIsApiAvailable(true);
@@ -114,7 +116,8 @@ export const useFamilyApi = (initialFamilyId: number = 1) => {
   // Update family
   const updateFamilyItem = async (id: number, name: string) => {
     try {
-      const result = await updateFamily(id, name);
+      // Convert number to string for the API call
+      const result = await updateFamily(String(id), name);
       
       if (result.success) {
         await loadFamilies(); // Refresh the data
@@ -147,7 +150,8 @@ export const useFamilyApi = (initialFamilyId: number = 1) => {
   // Delete family
   const deleteFamilyItem = async (id: number) => {
     try {
-      const result = await deleteFamily(id);
+      // Convert number to string for the API call
+      const result = await deleteFamily(String(id));
       
       if (result.success) {
         await loadFamilies(); // Refresh the data
