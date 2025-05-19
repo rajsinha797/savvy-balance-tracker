@@ -1,20 +1,20 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
-  Income,
   IncomeItem, 
   IncomeCategory,
   IncomeType,
   IncomeCategoryWithTypeId,
   IncomeSubCategory,
-  getAllIncomes, 
+  getAllIncome, 
   getIncomeCategories,
   getAllIncomeTypes,
-  getIncomeCategoriesByTypeId,
-  getIncomeSubCategoriesByCategoryId,
+  getIncomeCategoriesByType,
+  getIncomeSubcategoriesByCategory,
   addIncome, 
   updateIncome, 
-  deleteIncome 
+  deleteIncome,
+  IncomeFormData
 } from '@/services/incomeService';
 import { useToast } from "@/components/ui/use-toast";
 
@@ -30,7 +30,7 @@ export const useIncomeApi = (familyMemberId?: string) => {
     refetch: refetchIncomes
   } = useQuery({
     queryKey: ['incomes', familyMemberId],
-    queryFn: () => getAllIncomes(familyMemberId),
+    queryFn: () => getAllIncome(familyMemberId),
     meta: {
       onError: (error: Error) => {
         console.error('Error fetching incomes:', error);
@@ -84,9 +84,9 @@ export const useIncomeApi = (familyMemberId?: string) => {
   });
 
   // Function to fetch income categories based on type
-  const getIncomeCategoriesByType = async (typeId: number) => {
+  const getIncomeCategoriesByTypeId = async (typeId: number) => {
     try {
-      return await getIncomeCategoriesByTypeId(typeId);
+      return await getIncomeCategoriesByType(typeId);
     } catch (error) {
       console.error(`Error fetching income categories for type ${typeId}:`, error);
       toast({
@@ -99,9 +99,9 @@ export const useIncomeApi = (familyMemberId?: string) => {
   };
 
   // Function to fetch income subcategories based on category
-  const getIncomeSubCategoriesByCategory = async (categoryId: number) => {
+  const getIncomeSubCategoriesByCategoryId = async (categoryId: number) => {
     try {
-      return await getIncomeSubCategoriesByCategoryId(categoryId);
+      return await getIncomeSubcategoriesByCategory(categoryId);
     } catch (error) {
       console.error(`Error fetching income subcategories for category ${categoryId}:`, error);
       toast({
@@ -115,15 +115,7 @@ export const useIncomeApi = (familyMemberId?: string) => {
 
   // Mutation for adding income
   const addIncomeMutation = useMutation({
-    mutationFn: (newIncomeData: {
-      amount: number;
-      income_type_id: number;
-      income_category_id: number;
-      income_sub_category_id: number;
-      description: string;
-      date: string;
-      family_member_id?: string;
-    }) => addIncome(newIncomeData),
+    mutationFn: (newIncomeData: IncomeFormData) => addIncome(newIncomeData),
     onSuccess: (result) => {
       if (result.success) {
         // Invalidate queries to refetch data
@@ -153,18 +145,8 @@ export const useIncomeApi = (familyMemberId?: string) => {
 
   // Mutation for updating income
   const updateIncomeMutation = useMutation({
-    mutationFn: ({id, incomeData}: {
-      id: string | number; 
-      incomeData: {
-        amount: number;
-        income_type_id: number;
-        income_category_id: number;
-        income_sub_category_id: number;
-        description: string;
-        date: string;
-        family_member_id?: string;
-      }
-    }) => updateIncome(id, incomeData),
+    mutationFn: (params: { id: string | number; incomeData: IncomeFormData }) => 
+      updateIncome(params.id, params.incomeData),
     onSuccess: (result) => {
       if (result.success) {
         // Invalidate queries to refetch data
@@ -233,7 +215,9 @@ export const useIncomeApi = (familyMemberId?: string) => {
     categories: Array.isArray(categories) ? categories : [], // Legacy
     incomeTypes: Array.isArray(incomeTypes) ? incomeTypes : [],
     getIncomeCategoriesByType,
-    getIncomeSubCategoriesByCategory,
+    getIncomeSubcategoriesByCategory,
+    getIncomeCategoriesByTypeId, // Alias for compatibility
+    getIncomeSubCategoriesByCategoryId, // Alias for compatibility
     isLoading,
     isError,
     isApiAvailable,

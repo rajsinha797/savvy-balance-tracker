@@ -17,8 +17,8 @@ import {
   ExpenseCategoryWithTypeId,
   ExpenseSubCategory,
   getAllExpenseTypes,
-  getExpenseCategoriesByTypeId,
-  getExpenseSubCategoriesByCategoryId
+  getExpenseCategoriesByType,
+  getExpenseSubcategoriesByCategory
 } from "@/services/expenseService";
 
 interface BudgetCategoryFormProps {
@@ -60,7 +60,7 @@ const BudgetCategoryForm: React.FC<BudgetCategoryFormProps> = ({ onSubmit }) => 
       if (selectedTypeId) {
         try {
           setLoading(true);
-          const categories = await getExpenseCategoriesByTypeId(selectedTypeId);
+          const categories = await getExpenseCategoriesByType(selectedTypeId);
           setExpenseCategories(categories);
           setLoading(false);
         } catch (error) {
@@ -85,7 +85,7 @@ const BudgetCategoryForm: React.FC<BudgetCategoryFormProps> = ({ onSubmit }) => 
       if (selectedCategoryId) {
         try {
           setLoading(true);
-          const subcategories = await getExpenseSubCategoriesByCategoryId(selectedCategoryId);
+          const subcategories = await getExpenseSubcategoriesByCategory(selectedCategoryId);
           setExpenseSubCategories(subcategories);
           setLoading(false);
         } catch (error) {

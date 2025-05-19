@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Wallet, formatDateForDisplay } from '@/services/walletService';
+import { Wallet } from '@/services/walletService';
 
 // Import components
 import WalletSummary from '@/components/wallet/WalletSummary';
@@ -54,12 +54,7 @@ const WalletPage = () => {
   });
   
   // State for editing wallet
-  const [editingWallet, setEditingWallet] = useState<(Wallet & { 
-    wallet_type_id: number,
-    wallet_category_id: number,
-    wallet_sub_category_id: number | null, 
-    family_member_id: string 
-  }) | null>(null);
+  const [editingWallet, setEditingWallet] = useState<Wallet | null>(null);
 
   // Set default family member when family members data is loaded
   React.useEffect(() => {
@@ -93,6 +88,29 @@ const WalletPage = () => {
   const handleFamilyMemberChange = (value: string) => {
     setSelectedFamilyMember(value);
   };
+
+  // Format date function
+  const formatDateForDisplay = (dateString?: string): string => {
+    if (!dateString) return '';
+
+    // Handle ISO date strings
+    if (dateString.includes('T')) {
+      return dateString.split('T')[0];
+    }
+
+    // Handle DD/MM/YYYY format
+    if (dateString.includes('/')) {
+      const parts = dateString.split('/');
+      if (parts.length === 3) {
+        const day = parts[0].padStart(2, '0');
+        const month = parts[1].padStart(2, '0'); 
+        return `${parts[2]}-${month}-${day}`;
+      }
+    }
+
+    // Return as is if already in YYYY-MM-DD format or can't parse
+    return dateString;
+  };
   
   // Handle form submits
   const handleAddWallet = () => {
@@ -118,29 +136,17 @@ const WalletPage = () => {
       return;
     }
     
-    const { 
-      id, 
-      name,
-      amount, 
-      wallet_type_id, 
-      wallet_category_id, 
-      wallet_sub_category_id, 
-      description, 
-      date, 
-      family_member_id 
-    } = editingWallet;
-    
     updateWalletItem({
-      id,
+      id: editingWallet.id,
       wallet: {
-        name,
-        amount,
-        wallet_type_id,
-        wallet_category_id,
-        wallet_sub_category_id,
-        description,
-        date,
-        family_member_id
+        name: editingWallet.name,
+        amount: editingWallet.amount,
+        wallet_type_id: editingWallet.wallet_type_id,
+        wallet_category_id: editingWallet.wallet_category_id,
+        wallet_sub_category_id: editingWallet.wallet_sub_category_id || undefined,
+        description: editingWallet.description || '',
+        date: editingWallet.date || new Date().toISOString().split('T')[0],
+        family_member_id: editingWallet.family_member_id
       }
     });
     
@@ -183,11 +189,7 @@ const WalletPage = () => {
     // Format date for the form
     const formattedWallet = {
       ...wallet,
-      date: formatDateForDisplay(wallet.date),
-      wallet_type_id: wallet.wallet_type_id || 0,
-      wallet_category_id: wallet.wallet_category_id || 0,
-      wallet_sub_category_id: wallet.wallet_sub_category_id || null,
-      family_member_id: wallet.family_member_id || ''
+      date: wallet.date ? formatDateForDisplay(wallet.date) : new Date().toISOString().split('T')[0],
     };
     
     setEditingWallet(formattedWallet);

@@ -65,7 +65,7 @@ const ExpenseList: React.FC<ExpenseListProps> = ({
                       </td>
                       <td className="px-4 py-3 text-sm whitespace-nowrap">
                         <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-red-500/10 text-red-500">
-                          {expense.expense_category_name || expense.category || "N/A"}
+                          {expense.expense_category_name || "N/A"}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-sm whitespace-nowrap">

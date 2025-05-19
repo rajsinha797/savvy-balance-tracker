@@ -1,70 +1,60 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { IncomeCategory, IncomeItem } from '@/services/incomeService';
-import { getAllFamilyMembers, FamilyMember } from '@/services/familyService';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useIncomeApi } from '@/hooks/useIncomeApi';
+import { useFamilyApi } from '@/hooks/useFamilyApi';
+import { IncomeItem, IncomeFormData } from '@/services/incomeService';
+import { formatCurrency } from '@/lib/utils';
 
 // Import components
 import IncomeSummary from '@/components/income/IncomeSummary';
-import IncomeList from '@/components/income/IncomeList';
 import IncomeForm from '@/components/income/IncomeForm';
+import IncomeList from '@/components/income/IncomeList';
 import FamilyFilter from '@/components/income/FamilyFilter';
-
-// Import custom hooks
-import { useIncomeApi } from '@/hooks/useIncomeApi';
-import { useFamilyApi } from '@/hooks/useFamilyApi';
+import { useWalletApi } from '@/hooks/useWalletApi';
 
 const IncomePage = () => {
-  const [selectedFamilyMember, setSelectedFamilyMember] = useState<string>("all-members");
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  
-  // Use our custom hooks
+  const [activeTab, setActiveTab] = useState('all');
+  const [selectedFamilyMember, setSelectedFamilyMember] = useState<string>('all-members');
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [editingIncome, setEditingIncome] = useState<IncomeItem | null>(null);
+
+  // Get family members data
   const { familyMembers } = useFamilyApi();
-  const { 
-    incomes, 
-    categories, // Legacy categories
-    incomeTypes, // New income types
-    getIncomeCategoriesByType, // Function to get categories by type ID
-    getIncomeSubCategoriesByCategory, // Function to get subcategories by category ID
-    isLoading, 
+
+  // Get income data
+  const {
+    incomes,
+    incomeTypes,
+    isLoading,
+    getIncomeCategoriesByType,
+    getIncomeSubcategoriesByCategory,
     addIncome: addIncomeItem,
-    updateIncome: updateIncomeItem, 
-    deleteIncome: deleteIncomeItem 
+    updateIncome: updateIncomeItem,
+    deleteIncome: deleteIncomeItem
   } = useIncomeApi(selectedFamilyMember !== 'all-members' ? selectedFamilyMember : undefined);
-  
-  // New income form data state with the enhanced categorization structure and wallet
-  const [newIncome, setNewIncome] = useState<{ 
-    amount: number; 
-    income_type_id: number;
-    income_category_id: number;
-    income_sub_category_id: number;
-    description: string; 
-    date: string;
-    family_member_id: string;
-    wallet_id: number | null;
-  }>({ 
-    amount: 0, 
+
+  // Get wallet data for selection in form
+  const { availableWallets } = useWalletApi();
+
+  // New income form data state
+  const [newIncome, setNewIncome] = useState<IncomeFormData>({
+    amount: 0,
     income_type_id: 0,
     income_category_id: 0,
     income_sub_category_id: 0,
-    description: '', 
+    description: '',
     date: new Date().toISOString().split('T')[0],
     family_member_id: '',
     wallet_id: null
   });
-  
-  // State for editing income with the enhanced categorization structure and wallet
-  const [editingIncome, setEditingIncome] = useState<(IncomeItem & { 
-    income_type_id: number,
-    income_category_id: number,
-    income_sub_category_id: number,
-    family_member_id: string,
-    wallet_id: number | null
-  }) | null>(null);
 
   // Set default family member when family members data is loaded
-  React.useEffect(() => {
+  useEffect(() => {
     if (familyMembers.length > 0) {
       const defaultMember = familyMembers.find(member => member.is_default);
       if (defaultMember) {
@@ -73,99 +63,44 @@ const IncomePage = () => {
     }
   }, [familyMembers]);
 
-  // Create a map of category names to IDs for easier lookup (legacy)
-  const categoryIdMap: Record<string, number> = {};
-  categories.forEach(category => {
-    categoryIdMap[category.name] = category.category_id;
+  // Filter incomes by time period
+  const filteredIncomes = incomes.filter(income => {
+    if (!income.date) return true;
+    const incomeDate = new Date(income.date);
+    const now = new Date();
+    const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const lastQuarter = new Date(now.getFullYear(), now.getMonth() - 3, 1);
+    const lastYear = new Date(now.getFullYear() - 1, now.getMonth(), 1);
+
+    switch (activeTab) {
+      case 'month':
+        return incomeDate >= firstDayOfMonth;
+      case '3months':
+        return incomeDate >= lastQuarter;
+      case 'year':
+        return incomeDate >= lastYear;
+      case 'all':
+      default:
+        return true;
+    }
   });
 
-  const handleAddIncome = async () => {
-    if (newIncome.amount <= 0 || !newIncome.income_type_id || !newIncome.income_category_id || !newIncome.income_sub_category_id) {
-      // We can use toast here directly as it's already handled in the hook
-      return;
-    }
-    
-    addIncomeItem(newIncome);
-    
-    // Reset form
-    setNewIncome({ 
-      amount: 0, 
-      income_type_id: 0,
-      income_category_id: 0,
-      income_sub_category_id: 0,
-      description: '', 
-      date: new Date().toISOString().split('T')[0],
-      family_member_id: newIncome.family_member_id, // Keep the currently selected family member
-      wallet_id: null
-    });
-    setIsDialogOpen(false);
-  };
+  // Calculate total income for the selected period
+  const totalIncome = filteredIncomes.reduce((total, income) => {
+    return total + (typeof income.amount === 'number' ? income.amount : 0);
+  }, 0);
 
-  const handleEditIncome = async () => {
-    if (!editingIncome || editingIncome.amount <= 0 || !editingIncome.income_type_id || !editingIncome.income_category_id || !editingIncome.income_sub_category_id) {
-      return;
-    }
-    
-    const { 
-      id, 
-      amount, 
-      income_type_id, 
-      income_category_id, 
-      income_sub_category_id, 
-      description, 
-      date, 
-      family_member_id,
-      wallet_id 
-    } = editingIncome;
-    
-    updateIncomeItem({ 
-      id, 
-      incomeData: { 
-        amount, 
-        income_type_id, 
-        income_category_id, 
-        income_sub_category_id, 
-        description, 
-        date, 
-        family_member_id,
-        wallet_id 
-      } 
-    });
-    
-    setEditingIncome(null);
-    setIsDialogOpen(false);
-  };
-
-  const handleDeleteIncome = async (id: string | number) => {
-    deleteIncomeItem(id);
-  };
-
-  // Calculate total and average income with proper parsing
-  // Ensure we handle the case when incomes might be undefined or contain non-numeric values
-  const totalIncome = incomes && incomes.length > 0 
-    ? incomes.reduce((sum, item) => {
-        const amount = typeof item.amount === 'number' ? item.amount : 
-                      (typeof item.amount === 'string' ? parseFloat(item.amount) : 0);
-        return sum + amount;
-      }, 0)
-    : 0;
-  
-  const averageIncome = incomes && incomes.length > 0 
-    ? totalIncome / incomes.length
+  // Calculate average income per transaction
+  const averageIncome = filteredIncomes.length > 0
+    ? totalIncome / filteredIncomes.length
     : 0;
 
   const handleFamilyMemberChange = (value: string) => {
     setSelectedFamilyMember(value);
   };
 
-  // Find family member name by ID
-  const getFamilyMemberName = (id?: string) => {
-    if (!id) return null;
-    const member = familyMembers.find(m => m.id === id);
-    return member ? member.name : null;
-  };
-
-  // Handlers for form changes
+  // Handle form changes
   const handleNewIncomeChange = (field: string, value: string | number) => {
     setNewIncome(prev => ({ ...prev, [field]: value }));
   };
@@ -181,61 +116,89 @@ const IncomePage = () => {
     }
   };
 
+  // Handle form submits
+  const handleAddIncome = () => {
+    const formData: IncomeFormData = {
+      amount: newIncome.amount,
+      income_type_id: newIncome.income_type_id,
+      income_category_id: newIncome.income_category_id,
+      income_sub_category_id: newIncome.income_sub_category_id,
+      description: newIncome.description,
+      date: newIncome.date,
+      family_member_id: newIncome.family_member_id || undefined,
+      wallet_id: newIncome.wallet_id || null
+    };
+
+    addIncomeItem(formData);
+    
+    // Reset form
+    setNewIncome({
+      amount: 0,
+      income_type_id: 0,
+      income_category_id: 0,
+      income_sub_category_id: 0,
+      description: '',
+      date: new Date().toISOString().split('T')[0],
+      family_member_id: newIncome.family_member_id,
+      wallet_id: null
+    });
+    setIsAddDialogOpen(false);
+  };
+
+  const handleEditIncome = () => {
+    if (!editingIncome) return;
+    
+    const formData: IncomeFormData = {
+      amount: editingIncome.amount,
+      income_type_id: editingIncome.income_type_id || 0,
+      income_category_id: editingIncome.income_category_id || 0,
+      income_sub_category_id: editingIncome.income_sub_category_id || 0,
+      description: editingIncome.description || '',
+      date: editingIncome.date || new Date().toISOString().split('T')[0],
+      family_member_id: editingIncome.family_member_id || undefined,
+      wallet_id: editingIncome.wallet_id || null
+    };
+    
+    updateIncomeItem({
+      id: editingIncome.id,
+      incomeData: formData
+    });
+    
+    // Reset form
+    setEditingIncome(null);
+    setIsAddDialogOpen(false);
+  };
+
+  const handleDeleteIncome = (id: number | string) => {
+    deleteIncomeItem(id);
+  };
+
   const startEditIncome = (income: IncomeItem) => {
-    // Format the date properly for the edit form (ISO format for the date input)
-    let formattedDate = income.date;
-    
-    // Check if date is in format DD/MM/YYYY or other non-ISO format and convert it
-    if (income.date && income.date.includes('/')) {
-      const parts = income.date.split('/');
-      if (parts.length === 3) {
-        // If it's in format DD/MM/YYYY, convert to YYYY-MM-DD
-        const day = parts[0].padStart(2, '0');
-        const month = parts[1].padStart(2, '0');
-        const year = parts[2];
-        formattedDate = `${year}-${month}-${day}`;
-      }
-    } else if (income.date && !income.date.includes('-')) {
-      // Try to parse any other format to ISO
-      try {
-        const dateObj = new Date(income.date);
-        if (!isNaN(dateObj.getTime())) {
-          formattedDate = dateObj.toISOString().split('T')[0];
-        }
-      } catch (e) {
-        console.error("Error parsing date:", e);
-      }
-    }
-    
-    console.log("Original date:", income.date, "Formatted date:", formattedDate);
-    
-    // Use the income's existing values for the enhanced categorization if available
     setEditingIncome({
       ...income,
-      date: formattedDate,
+      // Ensure these properties exist
       income_type_id: income.income_type_id || 0,
       income_category_id: income.income_category_id || 0,
       income_sub_category_id: income.income_sub_category_id || 0,
-      family_member_id: income.family_member_id || '',
-      wallet_id: income.wallet_id || null
+      description: income.description || '',
+      family_member_id: income.family_member_id || ''
     });
-    
-    setIsDialogOpen(true);
+    setIsAddDialogOpen(true);
   };
 
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Income Management</h2>
+        <h2 className="text-2xl font-bold">Income</h2>
         
         <div className="flex gap-2">
-          <FamilyFilter 
+          <FamilyFilter
             selectedFamilyMember={selectedFamilyMember}
             familyMembers={familyMembers}
             onFamilyMemberChange={handleFamilyMemberChange}
           />
           
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
               <Button className="bg-fintrack-purple hover:bg-fintrack-purple/90">
                 <Plus className="h-4 w-4 mr-2" /> Add Income
@@ -245,38 +208,51 @@ const IncomePage = () => {
               <DialogHeader>
                 <DialogTitle>{editingIncome ? 'Edit Income' : 'Add New Income'}</DialogTitle>
               </DialogHeader>
-              <IncomeForm 
+              <IncomeForm
                 isEditing={!!editingIncome}
                 formData={editingIncome || newIncome}
                 onFormChange={editingIncome ? handleEditingIncomeChange : handleNewIncomeChange}
                 onSubmit={editingIncome ? handleEditIncome : handleAddIncome}
-                categories={categories} // Legacy categories
-                incomeTypes={incomeTypes} // New income types
+                incomeTypes={incomeTypes}
                 getIncomeCategoriesByType={getIncomeCategoriesByType}
-                getIncomeSubCategoriesByCategory={getIncomeSubCategoriesByCategory}
+                getIncomeSubcategoriesByCategory={getIncomeSubcategoriesByCategory}
                 familyMembers={familyMembers}
+                availableWallets={availableWallets}
               />
             </DialogContent>
           </Dialog>
         </div>
       </div>
+
+      {/* Income Overview */}
+      <IncomeSummary totalIncome={totalIncome} averageIncome={averageIncome} />
       
-      {/* Income Summary */}
-      <IncomeSummary 
-        totalIncome={totalIncome}
-        averageIncome={averageIncome}
-        entriesCount={incomes.length}
-        selectedFamilyMemberName={selectedFamilyMember !== 'all-members' ? getFamilyMemberName(selectedFamilyMember) : null}
-      />
-      
-      {/* Income Entries */}
-      <IncomeList 
-        incomes={incomes}
-        isLoading={isLoading}
-        onEditIncome={startEditIncome}
-        onDeleteIncome={handleDeleteIncome}
-        categoryIdMap={categoryIdMap}
-      />
+      {/* Income List with Time Filters */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Income History</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
+            <div className="px-6 border-b border-fintrack-bg-dark">
+              <TabsList className="bg-transparent border-b-0">
+                <TabsTrigger value="all" className="data-[state=active]:text-fintrack-purple">All Time</TabsTrigger>
+                <TabsTrigger value="year" className="data-[state=active]:text-fintrack-purple">Year</TabsTrigger>
+                <TabsTrigger value="3months" className="data-[state=active]:text-fintrack-purple">Quarter</TabsTrigger>
+                <TabsTrigger value="month" className="data-[state=active]:text-fintrack-purple">Month</TabsTrigger>
+              </TabsList>
+            </div>
+            <TabsContent value={activeTab} className="m-0">
+              <IncomeList
+                incomes={filteredIncomes}
+                isLoading={isLoading}
+                onEditIncome={startEditIncome}
+                onDeleteIncome={handleDeleteIncome}
+              />
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
     </div>
   );
 };

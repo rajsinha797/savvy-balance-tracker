@@ -26,6 +26,23 @@ export interface IncomeItem {
   wallet_name?: string;
 }
 
+export interface IncomeType {
+  id: number;
+  name: string;
+}
+
+export interface IncomeCategoryWithTypeId {
+  id: number;
+  name: string;
+  income_type_id: number;
+}
+
+export interface IncomeSubCategory {
+  id: number;
+  name: string;
+  income_category_id: number;
+}
+
 // Dummy data for fallback
 const dummyIncomeCategories: IncomeCategory[] = [
   { category_id: 1, name: 'Salary' },
@@ -39,7 +56,7 @@ const dummyIncomeCategories: IncomeCategory[] = [
 ];
 
 // New dummy income types for hierarchical categorization
-const dummyIncomeTypes = [
+const dummyIncomeTypes: IncomeType[] = [
   { id: 1, name: 'Employment' },
   { id: 2, name: 'Business' },
   { id: 3, name: 'Investment' },
@@ -143,7 +160,7 @@ export const addIncome = async (incomeData: IncomeFormData): Promise<{ success: 
 };
 
 // Update income
-export const updateIncome = async ({ id, incomeData }: { id: number | string; incomeData: IncomeFormData }): Promise<{ success: boolean; message: string }> => {
+export const updateIncome = async (id: number | string, incomeData: IncomeFormData): Promise<{ success: boolean; message: string }> => {
   try {
     await axios.put(`${API_URL}/api/income/${id}`, incomeData);
     return {
@@ -179,7 +196,7 @@ export const deleteIncome = async (id: number | string): Promise<{ success: bool
 // New hierarchical categorization endpoints
 
 // Get income types
-export const getAllIncomeTypes = async () => {
+export const getAllIncomeTypes = async (): Promise<IncomeType[]> => {
   try {
     const response = await axios.get(`${API_URL}/api/income/types`);
     return response.data;
@@ -191,7 +208,7 @@ export const getAllIncomeTypes = async () => {
 };
 
 // Get categories by type
-export const getIncomeCategoriesByType = async (typeId: number) => {
+export const getIncomeCategoriesByType = async (typeId: number): Promise<IncomeCategoryWithTypeId[]> => {
   try {
     const response = await axios.get(`${API_URL}/api/income/categories/by-type/${typeId}`);
     return response.data;
@@ -215,7 +232,7 @@ export const getIncomeCategoriesByType = async (typeId: number) => {
 };
 
 // Get subcategories by category
-export const getIncomeSubcategoriesByCategory = async (categoryId: number) => {
+export const getIncomeSubcategoriesByCategory = async (categoryId: number): Promise<IncomeSubCategory[]> => {
   try {
     const response = await axios.get(`${API_URL}/api/income/subcategories/by-category/${categoryId}`);
     return response.data;

@@ -1,12 +1,10 @@
 
 import React from 'react';
-import { Wallet } from '@/services/walletService';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Edit, Trash2 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Wallet } from '@/services/walletService';
 
 interface WalletListProps {
   wallets: Wallet[];
@@ -15,81 +13,101 @@ interface WalletListProps {
   onDeleteWallet: (id: string | number) => void;
 }
 
-const WalletList = ({ wallets, isLoading, onEditWallet, onDeleteWallet }: WalletListProps) => {
-  if (isLoading) {
-    return (
-      <Card className="bg-fintrack-card-dark border-fintrack-bg-dark">
-        <CardHeader>
-          <CardTitle>Wallets</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="w-full h-16 bg-fintrack-bg-dark/50" />
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+const WalletList: React.FC<WalletListProps> = ({
+  wallets,
+  isLoading,
+  onEditWallet,
+  onDeleteWallet
+}) => {
+  // Ensure wallets is an array
+  const safeWallets = Array.isArray(wallets) ? wallets : [];
 
   return (
-    <Card className="bg-fintrack-card-dark border-fintrack-bg-dark">
+    <Card className="card-gradient border-none">
       <CardHeader>
-        <CardTitle>Your Wallets</CardTitle>
+        <CardTitle className="text-xl font-semibold">Wallet Accounts</CardTitle>
       </CardHeader>
       <CardContent>
-        {wallets.length === 0 ? (
-          <div className="text-center py-4 text-fintrack-text-secondary">
-            No wallets found. Add a wallet to get started.
+        {isLoading ? (
+          <div className="flex justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-fintrack-purple"></div>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Family Member</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {wallets.map((wallet) => (
-                  <TableRow key={wallet.id} className="border-fintrack-bg-dark">
-                    <TableCell className="font-medium">{wallet.name}</TableCell>
-                    <TableCell>{wallet.wallet_type_name}</TableCell>
-                    <TableCell>{wallet.wallet_category_name}</TableCell>
-                    <TableCell className={`font-medium ${Number(wallet.is_expense) === 1 ? 'text-red-500' : 'text-green-500'}`}>
-                      {formatCurrency(Number(wallet.amount))}
-                    </TableCell>
-                    <TableCell>{wallet.family_member || 'N/A'}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => onEditWallet(wallet)}
-                          className="h-8 w-8"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="icon"
-                          onClick={() => onDeleteWallet(wallet.id)}
-                          className="h-8 w-8"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="border-b border-fintrack-bg-dark">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-fintrack-text-secondary">Name</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-fintrack-text-secondary">Type</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-fintrack-text-secondary">Category</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-fintrack-text-secondary">Subcategory</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-fintrack-text-secondary">Family Member</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-fintrack-text-secondary">Date</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-fintrack-text-secondary">Description</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-fintrack-text-secondary">Amount</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-fintrack-text-secondary">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {safeWallets.map((wallet) => (
+                  <tr key={wallet.id} className="border-b border-fintrack-bg-dark">
+                    <td className="px-4 py-3 text-sm whitespace-nowrap">{wallet.name}</td>
+                    <td className="px-4 py-3 text-sm whitespace-nowrap">
+                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                        wallet.is_expense ? 'bg-red-500/10 text-red-500' : 'bg-green-500/10 text-green-500'
+                      }`}>
+                        {wallet.wallet_type_name || wallet.type_name || 'Unknown Type'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-sm whitespace-nowrap">
+                      <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-blue-500/10 text-blue-500">
+                        {wallet.wallet_category_name || 'Not specified'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-sm whitespace-nowrap">
+                      <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-purple-500/10 text-purple-500">
+                        {wallet.wallet_sub_category_name || 'None'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-sm whitespace-nowrap">
+                      {wallet.family_member || 'Not assigned'}
+                    </td>
+                    <td className="px-4 py-3 text-sm whitespace-nowrap">{wallet.date || 'Not specified'}</td>
+                    <td className="px-4 py-3 text-sm">{wallet.description || 'No description'}</td>
+                    <td className="px-4 py-3 text-sm font-medium text-right">
+                      <span className={wallet.is_expense ? 'text-red-500' : 'text-green-500'}>
+                        {formatCurrency(wallet.amount)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right whitespace-nowrap">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => onEditWallet(wallet)}
+                        className="h-8 w-8 text-fintrack-text-secondary"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => onDeleteWallet(wallet.id)}
+                        className="h-8 w-8 text-fintrack-text-secondary"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </td>
+                  </tr>
                 ))}
-              </TableBody>
-            </Table>
+                {safeWallets.length === 0 && (
+                  <tr>
+                    <td colSpan={9} className="px-4 py-6 text-center text-fintrack-text-secondary">
+                      No wallet accounts found. Add your first wallet account.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
         )}
       </CardContent>

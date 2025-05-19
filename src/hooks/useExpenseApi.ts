@@ -3,18 +3,18 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import {
   getAllExpenses,
-  getExpense,
+  getExpenseById,
   createExpense,
   updateExpense,
   deleteExpense,
-  Expense,
+  ExpenseItem,
   ExpenseFormData,
   ExpenseType,
   ExpenseCategoryWithTypeId,
   ExpenseSubCategory,
   getAllExpenseTypes,
-  getExpenseCategoriesByTypeId,
-  getExpenseSubCategoriesByCategoryId
+  getExpenseCategoriesByType,
+  getExpenseSubcategoriesByCategory
 } from '@/services/expenseService';
 import { 
   getAllExpenseCategories,
@@ -88,9 +88,9 @@ export const useExpenseApi = (familyMemberId?: string) => {
   });
 
   // Function to fetch expense categories based on type
-  const getExpenseCategoriesByType = async (typeId: number) => {
+  const getExpenseCategoriesByTypeId = async (typeId: number) => {
     try {
-      return await getExpenseCategoriesByTypeId(typeId);
+      return await getExpenseCategoriesByType(typeId);
     } catch (error) {
       console.error(`Error fetching expense categories for type ${typeId}:`, error);
       toast({
@@ -103,9 +103,9 @@ export const useExpenseApi = (familyMemberId?: string) => {
   };
 
   // Function to fetch expense subcategories based on category
-  const getExpenseSubCategoriesByCategory = async (categoryId: number) => {
+  const getExpenseSubCategoriesByCategoryId = async (categoryId: number) => {
     try {
-      return await getExpenseSubCategoriesByCategoryId(categoryId);
+      return await getExpenseSubcategoriesByCategory(categoryId);
     } catch (error) {
       console.error(`Error fetching expense subcategories for category ${categoryId}:`, error);
       toast({
@@ -145,7 +145,7 @@ export const useExpenseApi = (familyMemberId?: string) => {
 
   // Update expense mutation
   const updateExpenseMutation = useMutation({
-    mutationFn: ({ id, expense }: { id: string | number; expense: ExpenseFormData }) => updateExpense(id, expense),
+    mutationFn: (params: { id: string | number; expense: ExpenseFormData }) => updateExpense(params.id, params.expense),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
       // Also invalidate budget queries to refresh the budget data
@@ -197,7 +197,9 @@ export const useExpenseApi = (familyMemberId?: string) => {
     expenseCategories, // legacy
     expenseTypes, // new
     getExpenseCategoriesByType,
-    getExpenseSubCategoriesByCategory,
+    getExpenseSubcategoriesByCategory,
+    getExpenseCategoriesByTypeId, // Alias for compatibility
+    getExpenseSubCategoriesByCategoryId, // Alias for compatibility
     isLoadingExpenses,
     isLoadingCategories,
     isLoadingExpenseTypes,

@@ -224,7 +224,7 @@ export const createExpense = async (expense: ExpenseFormData): Promise<{ success
 };
 
 // Update expense
-export const updateExpense = async ({ id, expense }: { id: number | string; expense: ExpenseFormData }): Promise<{ success: boolean; message: string }> => {
+export const updateExpense = async (id: number | string, expense: ExpenseFormData): Promise<{ success: boolean; message: string }> => {
   try {
     await axios.put(`${API_URL}/api/expenses/${id}`, expense);
     return {

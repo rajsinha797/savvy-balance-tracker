@@ -15,6 +15,9 @@ export interface Wallet {
   wallet_sub_category_id?: number;
   family_member_id?: string;
   wallet_type_name?: string;
+  wallet_category_name?: string;
+  wallet_sub_category_name?: string;
+  family_member?: string;
   type_name?: string; // Adding this for backwards compatibility
   is_expense?: number;
 }
@@ -42,10 +45,11 @@ export interface WalletFormData {
   amount: number;
   wallet_type_id: number;
   wallet_category_id: number;
-  wallet_sub_category_id: number;
+  wallet_sub_category_id?: number;
   date?: string;
   description?: string;
   family_member_id?: string;
+  wallet_id?: number;
 }
 
 // Dummy data for fallback
@@ -60,6 +64,9 @@ const dummyWallets: Wallet[] = [
     date: new Date().toISOString().split('T')[0],
     type_name: 'Cash',
     wallet_type_name: 'Cash',
+    wallet_category_name: 'Physical Cash',
+    wallet_sub_category_name: 'Wallet',
+    family_member: 'Self',
     is_expense: 1
   },
   { 
@@ -72,6 +79,9 @@ const dummyWallets: Wallet[] = [
     date: new Date().toISOString().split('T')[0],
     type_name: 'Bank Account',
     wallet_type_name: 'Bank Account',
+    wallet_category_name: 'Savings Account',
+    wallet_sub_category_name: 'Personal Savings',
+    family_member: 'Self',
     is_expense: 0
   },
   { 
@@ -84,6 +94,9 @@ const dummyWallets: Wallet[] = [
     date: new Date().toISOString().split('T')[0],
     type_name: 'Credit Card',
     wallet_type_name: 'Credit Card',
+    wallet_category_name: 'Credit Card',
+    wallet_sub_category_name: 'Visa',
+    family_member: 'Self',
     is_expense: 1
   }
 ];
@@ -115,6 +128,29 @@ const dummyWalletSubCategories: WalletSubCategory[] = [
   { id: 5, name: 'Visa', wallet_category_id: 4 },
   { id: 6, name: 'Mastercard', wallet_category_id: 4 }
 ];
+
+// Format date function
+export function formatDateForDisplay(dateString: string): string {
+  if (!dateString) return '';
+
+  // Handle ISO date strings
+  if (dateString.includes('T')) {
+    return dateString.split('T')[0];
+  }
+
+  // Handle DD/MM/YYYY format
+  if (dateString.includes('/')) {
+    const parts = dateString.split('/');
+    if (parts.length === 3) {
+      const day = parts[0].padStart(2, '0');
+      const month = parts[1].padStart(2, '0'); 
+      return `${parts[2]}-${month}-${day}`;
+    }
+  }
+
+  // Return as is if already in YYYY-MM-DD format or can't parse
+  return dateString;
+}
 
 // Get all wallets
 export const getAllWallets = async (familyMemberId?: string): Promise<Wallet[]> => {
@@ -209,7 +245,7 @@ export const getAllWalletTypes = async (): Promise<WalletType[]> => {
 };
 
 // Get wallet categories by type ID
-export const getWalletCategoriesByTypeId = async (typeId: number): Promise<WalletCategoryWithTypeId[]> => {
+export const getWalletCategoriesByType = async (typeId: number): Promise<WalletCategoryWithTypeId[]> => {
   try {
     const response = await axios.get(`${API_URL}/api/wallet/categories/by-type/${typeId}`);
     return response.data;
@@ -221,7 +257,7 @@ export const getWalletCategoriesByTypeId = async (typeId: number): Promise<Walle
 };
 
 // Get wallet subcategories by category ID
-export const getWalletSubCategoriesByCategoryId = async (categoryId: number): Promise<WalletSubCategory[]> => {
+export const getWalletSubCategoriesByCategory = async (categoryId: number): Promise<WalletSubCategory[]> => {
   try {
     const response = await axios.get(`${API_URL}/api/wallet/subcategories/by-category/${categoryId}`);
     return response.data;
