@@ -1,4 +1,3 @@
-
 import axios from 'axios';
 
 const API_URL = 'http://localhost:3001';
@@ -6,6 +5,7 @@ const API_URL = 'http://localhost:3001';
 // Interfaces
 export interface Family {
   family_id: string;
+  id: string; // Adding the id property to match what's being used in the components
   name: string;
 }
 
@@ -14,6 +14,7 @@ export interface FamilyMember {
   name: string;
   relation?: string;
   is_default?: boolean;
+  family_id?: string;
   [key: string]: any;
 }
 
@@ -26,7 +27,7 @@ export interface ApiResponse {
 
 // Dummy data for fallback
 const dummyFamilies: Family[] = [
-  { family_id: '1', name: 'Default Family' }
+  { family_id: '1', id: '1', name: 'Default Family' }
 ];
 
 const dummyFamilyMembers: FamilyMember[] = [
@@ -39,7 +40,11 @@ const dummyFamilyMembers: FamilyMember[] = [
 export const getAllFamilies = async (): Promise<Family[]> => {
   try {
     const response = await axios.get(`${API_URL}/api/families`);
-    return response.data;
+    // Map the response to ensure both family_id and id are present
+    return response.data.map((family: any) => ({
+      ...family,
+      id: family.id || family.family_id // Ensure id is set
+    }));
   } catch (error) {
     console.error('Error fetching families:', error);
     console.log('Using dummy family data');
@@ -51,7 +56,11 @@ export const getAllFamilies = async (): Promise<Family[]> => {
 export const getFamilyById = async (id: string): Promise<Family> => {
   try {
     const response = await axios.get(`${API_URL}/api/families/${id}`);
-    return response.data;
+    // Ensure both family_id and id are present
+    return {
+      ...response.data,
+      id: response.data.id || response.data.family_id
+    };
   } catch (error) {
     console.error(`Error fetching family with ID ${id}:`, error);
     console.log('Using dummy family data');

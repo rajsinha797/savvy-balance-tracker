@@ -221,7 +221,7 @@ const FamilyMembersPage = () => {
                     </CardHeader>
                     <CardContent className="p-4">
                       <div className="text-sm text-fintrack-text-secondary mb-2">
-                        Family Members: {familyMembers.filter(m => m.family_id === family.id).length}
+                        Family Members: {familyMembers.filter(m => m.family_id === family.family_id).length}
                       </div>
                     </CardContent>
                   </Card>
@@ -269,7 +269,7 @@ const FamilyMembersPage = () => {
               {familyMembers.length > 0 ? (
                 familyMembers.map((member) => {
                   const isDefault = member.is_default;
-                  const familyName = families.find(f => f.id === member.family_id)?.name || 'Unknown';
+                  const familyName = families.find(f => f.family_id === member.family_id)?.name || 'Unknown';
                   
                   return (
                     <Card key={member.id} className="overflow-hidden">

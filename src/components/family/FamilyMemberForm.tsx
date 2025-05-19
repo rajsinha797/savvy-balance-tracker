@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -58,7 +58,7 @@ const FamilyMemberForm: React.FC<FamilyMemberFormProps> = ({
           </SelectTrigger>
           <SelectContent>
             {families.map((family) => (
-              <SelectItem key={family.id} value={family.id}>
+              <SelectItem key={family.id} value={family.family_id}>
                 {family.name}
               </SelectItem>
             ))}
