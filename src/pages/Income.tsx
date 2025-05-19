@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
@@ -241,6 +240,7 @@ const IncomePage = () => {
                 getIncomeCategoriesByType={getIncomeCategoriesByType}
                 getIncomeSubCategoriesByCategory={getIncomeSubCategoriesByCategoryId}
                 familyMembers={familyMembers}
+                categories={[]} // Add empty categories or actual categories if you have them
                 availableWallets={availableWallets}
               />
             </DialogContent>

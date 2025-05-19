@@ -258,9 +258,10 @@ const WalletPage = () => {
       
       {/* Wallet Summary - Top section */}
       <WalletSummary 
-        balance={totalBalance} 
-        count={activeWallets} 
-        selectedUser={selectedFamilyMemberName || 'All Members'} 
+        totalSpending={spendingTotal}
+        totalSavings={savingsTotal}
+        totalDebt={debtTotal}
+        selectedFamilyMemberName={selectedFamilyMemberName}
       />
       
       {/* Wallet List - Bottom section */}

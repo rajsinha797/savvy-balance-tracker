@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,6 +13,7 @@ import {
 import { Loader2 } from 'lucide-react';
 import { IncomeCategory } from '@/services/incomeService';
 import { FamilyMember } from '@/services/familyService';
+import { Wallet } from '@/services/walletService';
 import { useWalletApi } from '@/hooks/useWalletApi';
 
 interface IncomeFormProps {
@@ -36,6 +36,7 @@ interface IncomeFormProps {
   getIncomeCategoriesByType: (typeId: number) => Promise<any[]>;
   getIncomeSubCategoriesByCategory: (categoryId: number) => Promise<any[]>;
   familyMembers: FamilyMember[];
+  availableWallets: Wallet[];
 }
 
 const IncomeForm: React.FC<IncomeFormProps> = ({
@@ -48,12 +49,14 @@ const IncomeForm: React.FC<IncomeFormProps> = ({
   getIncomeCategoriesByType,
   getIncomeSubCategoriesByCategory,
   familyMembers,
+  availableWallets = [],
 }) => {
   const [incomeCategories, setIncomeCategories] = useState<any[]>([]);
   const [incomeSubCategories, setIncomeSubCategories] = useState<any[]>([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(false);
   const [isLoadingSubCategories, setIsLoadingSubCategories] = useState(false);
-  const { availableWallets, isLoadingWallets } = useWalletApi();
+  const [isLoadingWallets, setIsLoadingWallets] = useState(false);
+  const { availableWallets: walletApiAvailableWallets, isLoadingWallets: walletApiIsLoadingWallets } = useWalletApi();
   
   // Load categories when type changes
   useEffect(() => {
