@@ -40,7 +40,7 @@ const IncomePage = () => {
   // Get wallet data for selection in form
   const { availableWallets } = useWalletApi();
 
-  // New income form data state
+  // New income form data state - updated to match IncomeFormData interface
   const [newIncome, setNewIncome] = useState<IncomeFormData>({
     amount: 0,
     income_type_id: 0,
@@ -48,8 +48,8 @@ const IncomePage = () => {
     income_sub_category_id: 0,
     description: '',
     date: new Date().toISOString().split('T')[0],
-    family_member_id: '', // This is no longer optional
-    wallet_id: null
+    family_member_id: '', 
+    wallet_id: null  // This now matches the IncomeFormData interface
   });
 
   // Set default family member when family members data is loaded
@@ -144,8 +144,8 @@ const IncomePage = () => {
       income_sub_category_id: editingIncome.income_sub_category_id || 0,
       description: editingIncome.description || '',
       date: editingIncome.date || new Date().toISOString().split('T')[0],
-      family_member_id: editingIncome.family_member_id || '', // Ensure this is a string
-      wallet_id: editingIncome.wallet_id || null
+      family_member_id: editingIncome.family_member_id || '', 
+      wallet_id: editingIncome.wallet_id || null  // Ensure this is optional but matches IncomeFormData
     };
     
     updateIncomeItem({

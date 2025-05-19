@@ -139,7 +139,7 @@ export interface IncomeFormData {
   description: string;
   date: string;
   family_member_id: string;
-  wallet_id?: number | null;
+  wallet_id: number | null;  // Change from optional to required (but allowing null)
 }
 
 export const addIncome = async (incomeData: IncomeFormData): Promise<{ success: boolean; message: string; id?: number | string }> => {
