@@ -13,7 +13,7 @@ router.post('/', walletController.createWallet);
 router.put('/:id', walletController.updateWallet);
 router.delete('/:id', walletController.deleteWallet);
 
-// Wallet types API endpoint
+// Wallet types API endpoint - this was likely the problematic line
 router.get('/types', walletCategoryController.getAllWalletTypes);
 router.get('/categories/by-type/:typeId', walletCategoryController.getWalletCategoriesByType);
 router.get('/subcategories/by-category/:categoryId', walletCategoryController.getWalletSubCategoriesByCategory);

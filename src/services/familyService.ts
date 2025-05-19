@@ -1,3 +1,4 @@
+
 import axios from 'axios';
 
 const API_URL = 'http://localhost:3001';
@@ -36,9 +37,23 @@ const dummyFamilyMembers: FamilyMember[] = [
   { id: '3', name: 'Child', relation: 'Child' }
 ];
 
+// Helper function to check if API is available
+const checkApiAvailability = async (): Promise<boolean> => {
+  try {
+    await axios.get(`${API_URL}/api/docs`, { timeout: 2000 });
+    return true;
+  } catch (error) {
+    console.warn('API server appears to be down, using dummy data');
+    return false;
+  }
+};
+
 // Get all families
 export const getAllFamilies = async (): Promise<Family[]> => {
   try {
+    const apiAvailable = await checkApiAvailability();
+    if (!apiAvailable) throw new Error('API unavailable');
+    
     const response = await axios.get(`${API_URL}/api/families`);
     // Map the response to ensure both family_id and id are present
     return response.data.map((family: any) => ({
@@ -55,6 +70,9 @@ export const getAllFamilies = async (): Promise<Family[]> => {
 // Get family by ID
 export const getFamilyById = async (id: string): Promise<Family> => {
   try {
+    const apiAvailable = await checkApiAvailability();
+    if (!apiAvailable) throw new Error('API unavailable');
+    
     const response = await axios.get(`${API_URL}/api/families/${id}`);
     // Ensure both family_id and id are present
     return {
@@ -71,6 +89,9 @@ export const getFamilyById = async (id: string): Promise<Family> => {
 // Create new family
 export const addFamily = async (name: string): Promise<ApiResponse> => {
   try {
+    const apiAvailable = await checkApiAvailability();
+    if (!apiAvailable) throw new Error('API unavailable');
+    
     const response = await axios.post(`${API_URL}/api/families`, { name });
     return {
       success: true,
@@ -89,6 +110,9 @@ export const addFamily = async (name: string): Promise<ApiResponse> => {
 // Update family
 export const updateFamily = async (id: string, name: string): Promise<ApiResponse> => {
   try {
+    const apiAvailable = await checkApiAvailability();
+    if (!apiAvailable) throw new Error('API unavailable');
+    
     await axios.put(`${API_URL}/api/families/${id}`, { name });
     return {
       success: true,
@@ -106,6 +130,9 @@ export const updateFamily = async (id: string, name: string): Promise<ApiRespons
 // Delete family
 export const deleteFamily = async (id: string): Promise<ApiResponse> => {
   try {
+    const apiAvailable = await checkApiAvailability();
+    if (!apiAvailable) throw new Error('API unavailable');
+    
     await axios.delete(`${API_URL}/api/families/${id}`);
     return {
       success: true,
@@ -123,6 +150,9 @@ export const deleteFamily = async (id: string): Promise<ApiResponse> => {
 // Get all family members
 export const getAllFamilyMembers = async (familyId?: string): Promise<FamilyMember[]> => {
   try {
+    const apiAvailable = await checkApiAvailability();
+    if (!apiAvailable) throw new Error('API unavailable');
+    
     // Updated endpoint to match the route in index.js
     const url = familyId ? `${API_URL}/api/family-members?family_id=${familyId}` : `${API_URL}/api/family-members`;
     const response = await axios.get(url);
@@ -137,6 +167,9 @@ export const getAllFamilyMembers = async (familyId?: string): Promise<FamilyMemb
 // Get family member by ID
 export const getFamilyMemberById = async (id: string): Promise<FamilyMember> => {
   try {
+    const apiAvailable = await checkApiAvailability();
+    if (!apiAvailable) throw new Error('API unavailable');
+    
     const response = await axios.get(`${API_URL}/api/family-members/${id}`);
     return response.data;
   } catch (error) {
@@ -150,6 +183,9 @@ export const getFamilyMemberById = async (id: string): Promise<FamilyMember> => 
 // Create new family member
 export const addFamilyMember = async (familyMember: Omit<FamilyMember, 'id'>): Promise<ApiResponse> => {
   try {
+    const apiAvailable = await checkApiAvailability();
+    if (!apiAvailable) throw new Error('API unavailable');
+    
     const response = await axios.post(`${API_URL}/api/family-members`, familyMember);
     return {
       success: true,
@@ -168,6 +204,9 @@ export const addFamilyMember = async (familyMember: Omit<FamilyMember, 'id'>): P
 // Update family member
 export const updateFamilyMember = async (id: string, familyMember: Partial<FamilyMember>): Promise<ApiResponse> => {
   try {
+    const apiAvailable = await checkApiAvailability();
+    if (!apiAvailable) throw new Error('API unavailable');
+    
     await axios.put(`${API_URL}/api/family-members/${id}`, familyMember);
     return {
       success: true,
@@ -185,6 +224,9 @@ export const updateFamilyMember = async (id: string, familyMember: Partial<Famil
 // Delete family member
 export const deleteFamilyMember = async (id: string): Promise<ApiResponse> => {
   try {
+    const apiAvailable = await checkApiAvailability();
+    if (!apiAvailable) throw new Error('API unavailable');
+    
     await axios.delete(`${API_URL}/api/family-members/${id}`);
     return {
       success: true,
