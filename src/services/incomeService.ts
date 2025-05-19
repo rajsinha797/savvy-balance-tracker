@@ -138,7 +138,7 @@ export interface IncomeFormData {
   income_sub_category_id: number;
   description: string;
   date: string;
-  family_member_id?: string;
+  family_member_id: string;
   wallet_id?: number | null;
 }
 

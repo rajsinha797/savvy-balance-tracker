@@ -48,7 +48,7 @@ const IncomePage = () => {
     income_sub_category_id: 0,
     description: '',
     date: new Date().toISOString().split('T')[0],
-    family_member_id: '', // Ensure this is a non-optional string
+    family_member_id: '', // This is no longer optional
     wallet_id: null
   });
 
@@ -117,13 +117,7 @@ const IncomePage = () => {
 
   // Handle form submits
   const handleAddIncome = () => {
-    // Make sure family_member_id is defined before submitting
-    const formData: IncomeFormData = {
-      ...newIncome,
-      family_member_id: newIncome.family_member_id || ''
-    };
-
-    addIncomeItem(formData);
+    addIncomeItem(newIncome);
     
     // Reset form
     setNewIncome({
@@ -133,7 +127,7 @@ const IncomePage = () => {
       income_sub_category_id: 0,
       description: '',
       date: new Date().toISOString().split('T')[0],
-      family_member_id: newIncome.family_member_id || '',
+      family_member_id: newIncome.family_member_id,
       wallet_id: null
     });
     setIsAddDialogOpen(false);

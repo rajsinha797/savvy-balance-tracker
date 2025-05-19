@@ -15,7 +15,7 @@ import {
 } from '@/services/familyService';
 import { useToast } from "@/hooks/use-toast";
 
-export const useFamilyApi = (initialFamilyId: number = 1) => {
+export const useFamilyApi = (initialFamilyId: string = '1') => {
   const { toast } = useToast();
   
   const [families, setFamilies] = useState<Family[]>([]);
@@ -23,7 +23,7 @@ export const useFamilyApi = (initialFamilyId: number = 1) => {
   const [defaultMember, setDefaultMember] = useState<FamilyMember | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isApiAvailable, setIsApiAvailable] = useState<boolean | null>(null);
-  const [currentFamilyId, setCurrentFamilyId] = useState<number>(initialFamilyId);
+  const [currentFamilyId, setCurrentFamilyId] = useState<string>(initialFamilyId);
 
   // Load families data
   const loadFamilies = useCallback(async () => {
@@ -46,16 +46,16 @@ export const useFamilyApi = (initialFamilyId: number = 1) => {
   }, [toast]);
 
   // Load family members data
-  const loadFamilyMembers = useCallback(async (familyId?: number) => {
+  const loadFamilyMembers = useCallback(async (familyId?: string) => {
     setIsLoading(true);
     try {
       const fid = familyId || currentFamilyId;
-      // Convert number to string for the API call
-      const membersData = await getAllFamilyMembers(String(fid));
+      // Already a string, no conversion needed
+      const membersData = await getAllFamilyMembers(fid);
       setFamilyMembers(membersData);
       
       // Also load default member
-      const defaultMemberData = await getDefaultFamilyMember(String(fid));
+      const defaultMemberData = await getDefaultFamilyMember(fid);
       setDefaultMember(defaultMemberData);
       
       setIsApiAvailable(true);
@@ -103,10 +103,10 @@ export const useFamilyApi = (initialFamilyId: number = 1) => {
   };
 
   // Update family
-  const updateFamilyItem = async (id: number, name: string) => {
+  const updateFamilyItem = async (id: string, name: string) => {
     try {
-      // Convert number to string for the API call
-      await updateFamily(String(id), name);
+      // Already a string, no conversion needed
+      await updateFamily(id, name);
       
       await loadFamilies(); // Refresh the data
       
@@ -128,10 +128,10 @@ export const useFamilyApi = (initialFamilyId: number = 1) => {
   };
 
   // Delete family
-  const deleteFamilyItem = async (id: number) => {
+  const deleteFamilyItem = async (id: string) => {
     try {
-      // Convert number to string for the API call
-      await deleteFamily(String(id));
+      // Already a string, no conversion needed
+      await deleteFamily(id);
       
       await loadFamilies(); // Refresh the data
       
@@ -153,7 +153,7 @@ export const useFamilyApi = (initialFamilyId: number = 1) => {
   };
 
   // Add family member
-  const addFamilyMemberItem = async (memberData: Omit<FamilyMember, 'id' | 'family_id'> & { family_id?: number }) => {
+  const addFamilyMemberItem = async (memberData: Omit<FamilyMember, 'id' | 'family_id'> & { family_id?: string }) => {
     try {
       // If no family_id provided, use current family ID
       const dataWithFamily = {
@@ -183,7 +183,7 @@ export const useFamilyApi = (initialFamilyId: number = 1) => {
   };
 
   // Update family member
-  const updateFamilyMemberItem = async (id: string, memberData: Omit<FamilyMember, 'id' | 'family_id'> & { family_id?: number }) => {
+  const updateFamilyMemberItem = async (id: string, memberData: Omit<FamilyMember, 'id' | 'family_id'> & { family_id?: string }) => {
     try {
       await updateFamilyMember(id, memberData);
       
@@ -261,7 +261,7 @@ export const useFamilyApi = (initialFamilyId: number = 1) => {
   };
 
   // Switch current family
-  const switchFamily = (familyId: number) => {
+  const switchFamily = (familyId: string) => {
     setCurrentFamilyId(familyId);
     loadFamilyMembers(familyId);
   };

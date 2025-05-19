@@ -19,7 +19,7 @@ const FamilyMembersPage = () => {
   // States for form data
   const [newFamilyName, setNewFamilyName] = useState('');
   const [editFamilyName, setEditFamilyName] = useState('');
-  const [editFamilyId, setEditFamilyId] = useState<string>(''); // Changed from number to string
+  const [editFamilyId, setEditFamilyId] = useState<string>('');
   
   const [newMemberName, setNewMemberName] = useState('');
   const [newMemberRelationship, setNewMemberRelationship] = useState('');
@@ -100,7 +100,7 @@ const FamilyMembersPage = () => {
   };
   
   const openEditFamilyDialog = (family: Family) => {
-    setEditFamilyId(family.family_id.toString()); // Convert to string
+    setEditFamilyId(family.family_id.toString());
     setEditFamilyName(family.name);
     setIsEditFamilyDialogOpen(true);
   };
@@ -161,13 +161,13 @@ const FamilyMembersPage = () => {
                 <div 
                   key={family.family_id}
                   className={`flex justify-between items-center p-3 rounded-lg ${
-                    currentFamilyId === family.family_id ? 'bg-fintrack-bg-dark' : 'hover:bg-fintrack-bg-dark/50'
+                    currentFamilyId === family.family_id.toString() ? 'bg-fintrack-bg-dark' : 'hover:bg-fintrack-bg-dark/50'
                   }`}
-                  onClick={() => switchFamily(family.family_id)}
+                  onClick={() => switchFamily(family.family_id.toString())}
                 >
                   <div className="flex items-center space-x-3">
                     <div className="font-medium">{family.name}</div>
-                    {currentFamilyId === family.family_id && (
+                    {currentFamilyId === family.family_id.toString() && (
                       <span className="bg-fintrack-purple/20 text-fintrack-purple text-xs py-0.5 px-2 rounded">Current</span>
                     )}
                   </div>
@@ -188,7 +188,7 @@ const FamilyMembersPage = () => {
                       size="icon"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleDeleteFamily(family.family_id.toString()); // Convert to string
+                        handleDeleteFamily(family.family_id.toString());
                       }}
                     >
                       <Trash2 className="h-4 w-4 text-destructive" />
