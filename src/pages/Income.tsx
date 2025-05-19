@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
@@ -31,7 +32,7 @@ const IncomePage = () => {
     incomeTypes,
     isLoading,
     getIncomeCategoriesByType,
-    getIncomeSubcategoriesByCategory,
+    getIncomeSubCategoriesByCategoryId,
     addIncome: addIncomeItem,
     updateIncome: updateIncomeItem,
     deleteIncome: deleteIncomeItem
@@ -197,6 +198,9 @@ const IncomePage = () => {
     ? getFamilyMemberName(selectedFamilyMember)
     : null;
 
+  // Create an empty category map for IncomeList
+  const categoryIdMap = {};
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex justify-between items-center">
@@ -235,7 +239,7 @@ const IncomePage = () => {
                 onSubmit={editingIncome ? handleEditIncome : handleAddIncome}
                 incomeTypes={incomeTypes}
                 getIncomeCategoriesByType={getIncomeCategoriesByType}
-                getIncomeSubcategoriesByCategory={getIncomeSubcategoriesByCategory}
+                getIncomeSubCategoriesByCategory={getIncomeSubCategoriesByCategoryId}
                 familyMembers={familyMembers}
                 availableWallets={availableWallets}
               />
@@ -273,7 +277,7 @@ const IncomePage = () => {
                 isLoading={isLoading}
                 onEditIncome={startEditIncome}
                 onDeleteIncome={handleDeleteIncome}
-                categoryIdMap={{}}
+                categoryIdMap={categoryIdMap}
               />
             </TabsContent>
           </Tabs>

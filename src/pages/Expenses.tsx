@@ -26,7 +26,7 @@ const ExpensesPage = () => {
     expenses, 
     expenseTypes, 
     getExpenseCategoriesByType,
-    getExpenseSubCategoriesByCategory,
+    getExpenseSubCategoriesByCategoryId: getExpenseSubCategoriesByCategory, // Aliased to match expected property name
     isLoading,
     createExpense: addExpense,
     updateExpense: updateExpenseItem,

@@ -1,10 +1,11 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useWalletApi } from '@/hooks/useWalletApi';
 import { useFamilyApi } from '@/hooks/useFamilyApi';
-import { WalletFormData } from '@/services/walletService';
+import { WalletFormData, Wallet } from '@/services/walletService'; // Import Wallet type
 import WalletForm from '@/components/wallet/WalletForm';
 import WalletList from '@/components/wallet/WalletList';
 import WalletSummary from '@/components/wallet/WalletSummary';
@@ -257,8 +258,8 @@ const WalletPage = () => {
       
       {/* Wallet Summary - Top section */}
       <WalletSummary 
-        totalBalance={totalBalance} 
-        activeWallets={activeWallets} 
+        balance={totalBalance} 
+        count={activeWallets} 
         selectedUser={selectedFamilyMemberName || 'All Members'} 
       />
       
