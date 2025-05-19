@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { 
   Family,
@@ -12,7 +11,6 @@ import {
   addFamilyMember, 
   updateFamilyMember, 
   deleteFamilyMember,
-  setDefaultFamilyMember,
   getDefaultFamilyMember
 } from '@/services/familyService';
 import { useToast } from "@/hooks/use-toast";
@@ -235,13 +233,19 @@ export const useFamilyApi = (initialFamilyId: number = 1) => {
   // Set default family member
   const setDefaultFamilyMemberItem = async (id: string) => {
     try {
-      await setDefaultFamilyMember(id);
+      // Since there's no setDefaultFamilyMember export, we'll just update the UI state
+      // and inform the user that the backend functionality isn't implemented
       
-      await loadFamilyMembers(); // Refresh the data
+      // Update local state
+      const member = familyMembers.find(m => m.id === id);
+      if (member) {
+        setDefaultMember(member);
+      }
       
       toast({
-        title: "Success",
-        description: "Default family member updated successfully",
+        title: "Feature not implemented",
+        description: "Setting default family member is not fully implemented in the backend yet.",
+        variant: "default",
       });
       
       return true;

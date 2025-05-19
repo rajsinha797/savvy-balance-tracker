@@ -1,22 +1,17 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Wallet } from '@/services/walletService';
-
-// Import components
-import WalletSummary from '@/components/wallet/WalletSummary';
-import WalletForm from '@/components/wallet/WalletForm';
-import WalletList from '@/components/wallet/WalletList';
-import FamilyFilter from '@/components/income/FamilyFilter';
-
-// Import custom hooks
 import { useWalletApi } from '@/hooks/useWalletApi';
 import { useFamilyApi } from '@/hooks/useFamilyApi';
+import { WalletFormData } from '@/services/walletService';
+import WalletForm from '@/components/wallet/WalletForm';
+import WalletList from '@/components/wallet/WalletList';
+import WalletSummary from '@/components/wallet/WalletSummary';
+import FamilyFilter from '@/components/income/FamilyFilter';
 
-// Format date function
-const formatDateForDisplay = (dateString?: string): string => {
+// Add the missing formatDateForDisplay function
+const formatDateForDisplay = (dateString: string): string => {
   if (!dateString) return '';
 
   // Handle ISO date strings
@@ -49,10 +44,10 @@ const WalletPage = () => {
     walletTypes, 
     getWalletCategoriesByType,
     getWalletSubCategoriesByCategory,
-    isLoading,
-    createWallet: addWallet,
-    updateWallet: updateWalletItem,
-    deleteWallet: deleteWalletItem
+    isLoading, 
+    createWallet,
+    updateWallet,
+    deleteWallet 
   } = useWalletApi(selectedFamilyMember !== 'all-members' ? selectedFamilyMember : undefined);
   
   // New wallet form data state
@@ -114,50 +109,59 @@ const WalletPage = () => {
   
   // Handle form submits
   const handleAddWallet = () => {
-    if (newWallet.amount <= 0 || !newWallet.wallet_type_id || !newWallet.wallet_category_id || !newWallet.name) {
-      return;
-    }
-    addWallet(newWallet);
-    setNewWallet({ 
+    const formData: WalletFormData = {
+      name: newWallet.name,
+      amount: newWallet.amount,
+      wallet_type_id: newWallet.wallet_type_id,
+      wallet_category_id: newWallet.wallet_category_id,
+      wallet_sub_category_id: newWallet.wallet_sub_category_id,
+      date: newWallet.date,
+      description: newWallet.description || '',
+      family_member_id: newWallet.family_member_id || undefined
+    };
+
+    createWallet(formData);
+    
+    // Reset form data
+    setNewWallet({
       name: '',
-      amount: 0, 
+      amount: 0,
       wallet_type_id: 0,
       wallet_category_id: 0,
-      wallet_sub_category_id: null,
-      description: '', 
+      wallet_sub_category_id: 0,
+      description: '',
       date: new Date().toISOString().split('T')[0],
-      family_member_id: newWallet.family_member_id
+      family_member_id: newWallet.family_member_id || ''
     });
     setIsDialogOpen(false);
   };
 
   const handleEditWallet = () => {
-    if (!editingWallet || !editingWallet.name || editingWallet.amount <= 0 || !editingWallet.wallet_type_id || !editingWallet.wallet_category_id) {
-      return;
-    }
+    if (!editingWallet) return;
     
-    const formData = {
+    const formData: WalletFormData = {
       name: editingWallet.name,
-      amount: editingWallet.amount as number,
-      wallet_type_id: editingWallet.wallet_type_id as number,
-      wallet_category_id: editingWallet.wallet_category_id as number,
-      wallet_sub_category_id: editingWallet.wallet_sub_category_id || undefined,
-      description: editingWallet.description || '',
+      amount: editingWallet.amount,
+      wallet_type_id: editingWallet.wallet_type_id || 0,
+      wallet_category_id: editingWallet.wallet_category_id || 0,
+      wallet_sub_category_id: editingWallet.wallet_sub_category_id || 0, 
       date: editingWallet.date || new Date().toISOString().split('T')[0],
+      description: editingWallet.description || '',
       family_member_id: editingWallet.family_member_id || undefined
     };
     
-    updateWalletItem({
+    updateWallet({ 
       id: editingWallet.id,
       wallet: formData
     });
     
+    // Reset form data
     setEditingWallet(null);
     setIsDialogOpen(false);
   };
 
   const handleDeleteWallet = (id: string | number) => {
-    deleteWalletItem(id);
+    deleteWallet(id);
   };
 
   // Find family member name by ID
@@ -172,11 +176,11 @@ const WalletPage = () => {
     : null;
     
   // Handlers for form changes
-  const handleNewWalletChange = (field: string, value: string | number | null) => {
+  const handleNewWalletChange = (field: string, value: string | number) => {
     setNewWallet(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleEditingWalletChange = (field: string, value: string | number | null) => {
+  const handleEditingWalletChange = (field: string, value: string | number) => {
     if (editingWallet) {
       setEditingWallet(prev => {
         if (prev) {
@@ -198,6 +202,13 @@ const WalletPage = () => {
     setIsDialogOpen(true);
   };
 
+  // Calculate summary data for wallets
+  const totalBalance = wallets.reduce((total, wallet) => {
+    return total + Number(wallet.amount);
+  }, 0);
+
+  const activeWallets = wallets.length;
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex justify-between items-center">
@@ -213,16 +224,25 @@ const WalletPage = () => {
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button className="bg-fintrack-purple hover:bg-fintrack-purple/90">
-                <Plus className="h-4 w-4 mr-2" /> Add Wallet
+                <Plus className="h-4 w-4 mr-2" /> Add Wallet Account
               </Button>
             </DialogTrigger>
             <DialogContent className="bg-fintrack-card-dark border border-fintrack-bg-dark">
               <DialogHeader>
-                <DialogTitle>{editingWallet ? 'Edit Wallet' : 'Add New Wallet'}</DialogTitle>
+                <DialogTitle>{editingWallet ? 'Edit Wallet Account' : 'Add New Wallet Account'}</DialogTitle>
               </DialogHeader>
-              <WalletForm 
+              <WalletForm
                 isEditing={!!editingWallet}
-                formData={editingWallet || newWallet}
+                formData={editingWallet ? {
+                  name: editingWallet.name || '',
+                  amount: typeof editingWallet.amount === 'number' ? editingWallet.amount : 0,
+                  wallet_type_id: editingWallet.wallet_type_id || 0,
+                  wallet_category_id: editingWallet.wallet_category_id || 0,
+                  wallet_sub_category_id: editingWallet.wallet_sub_category_id || 0,
+                  date: editingWallet.date || new Date().toISOString().split('T')[0],
+                  description: editingWallet.description || '',
+                  family_member_id: editingWallet.family_member_id || ''
+                } : newWallet}
                 onFormChange={editingWallet ? handleEditingWalletChange : handleNewWalletChange}
                 onSubmit={editingWallet ? handleEditWallet : handleAddWallet}
                 walletTypes={walletTypes}
@@ -237,13 +257,12 @@ const WalletPage = () => {
       
       {/* Wallet Summary - Top section */}
       <WalletSummary 
-        totalSpending={spendingTotal}
-        totalSavings={savingsTotal}
-        totalDebt={debtTotal}
-        selectedFamilyMemberName={selectedFamilyMemberName}
+        totalBalance={totalBalance} 
+        activeWallets={activeWallets} 
+        selectedUser={selectedFamilyMemberName || 'All Members'} 
       />
       
-      {/* Wallet Entries - Bottom section */}
+      {/* Wallet List - Bottom section */}
       <WalletList 
         wallets={wallets}
         isLoading={isLoading}

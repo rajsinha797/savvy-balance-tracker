@@ -198,8 +198,8 @@ export const useExpenseApi = (familyMemberId?: string) => {
     expenseTypes, // new
     getExpenseCategoriesByType: getExpenseCategoriesByTypeId,
     getExpenseSubcategoriesByCategory: getExpenseSubCategoriesByCategoryId,
-    getExpenseCategoriesByTypeId, // Alias for compatibility
-    getExpenseSubCategoriesByCategoryId, // Alias for compatibility
+    getExpenseCategoriesByTypeId, 
+    getExpenseSubCategoriesByCategoryId, 
     isLoadingExpenses,
     isLoadingCategories,
     isLoadingExpenseTypes,

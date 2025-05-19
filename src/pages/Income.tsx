@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
@@ -148,8 +147,9 @@ const IncomePage = () => {
   const handleEditIncome = () => {
     if (!editingIncome) return;
     
+    // Make sure all required fields are present in the form data
     const formData: IncomeFormData = {
-      amount: editingIncome.amount as number,
+      amount: typeof editingIncome.amount === 'number' ? editingIncome.amount : 0,
       income_type_id: editingIncome.income_type_id || 0,
       income_category_id: editingIncome.income_category_id || 0,
       income_sub_category_id: editingIncome.income_sub_category_id || 0,
@@ -221,7 +221,16 @@ const IncomePage = () => {
               </DialogHeader>
               <IncomeForm
                 isEditing={!!editingIncome}
-                formData={editingIncome || newIncome}
+                formData={editingIncome ? {
+                  amount: typeof editingIncome.amount === 'number' ? editingIncome.amount : 0,
+                  income_type_id: editingIncome.income_type_id || 0,
+                  income_category_id: editingIncome.income_category_id || 0,
+                  income_sub_category_id: editingIncome.income_sub_category_id || 0,
+                  description: editingIncome.description || '',
+                  date: editingIncome.date || new Date().toISOString().split('T')[0],
+                  family_member_id: editingIncome.family_member_id || '',
+                  wallet_id: editingIncome.wallet_id || null
+                } : newIncome}
                 onFormChange={editingIncome ? handleEditingIncomeChange : handleNewIncomeChange}
                 onSubmit={editingIncome ? handleEditIncome : handleAddIncome}
                 incomeTypes={incomeTypes}
